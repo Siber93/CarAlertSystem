@@ -1,0 +1,5 @@
+[WiFi Direct Description 1] https://hsc.com/DesktopModules/DigArticle/Print.aspx?PortalId=0&ModuleId=1215&Article=221
+
+[WiFi Direct Description 2] https://www.researchgate.net/publication/317858557_Wi-Fi_Direct_Research_-_Current_Status_and_Future_Perspectives
+
+[WiFi Direct - Android > Arduino] https://hackaday.io/project/11734-1sheeld-in-0/log/38145-implementing-wifi-direct-in-arduino-library-wifi101
