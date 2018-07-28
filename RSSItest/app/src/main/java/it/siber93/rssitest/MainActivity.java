@@ -3,10 +3,14 @@ package it.siber93.rssitest;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.os.Environment;
 import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 
 import com.androidplot.Plot;
 import com.androidplot.util.PixelUtils;
@@ -23,6 +27,8 @@ import org.altbeacon.beacon.BeaconManager;
 import org.altbeacon.beacon.RangeNotifier;
 import org.altbeacon.beacon.Region;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,16 +62,17 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
     // Plot updater, observer of the data struct
     private MyPlotUpdater plotUpdater;
 
-    // Data is the Runnuble that update plot series and that must be observed
-    SampleDynamicXYDatasource data;
+    // True = the system is enabled to receive beacons/signal, False = system in idle
+    private boolean onRecording = false;
 
-    // Thread that generates new data
-    private Thread myThread;
+    // The list of the series
+    private ArrayList<SampleDynamicSeries> mySeries;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
         // Beacon manager creation
         beaconManager = BeaconManager.getInstanceForApplication(this);
@@ -87,9 +94,8 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
                 setFormat(new DecimalFormat("0"));
 
         // Initialize data struct
-        data = new SampleDynamicXYDatasource();
-        SampleDynamicSeries sine1Series = new SampleDynamicSeries(data, 0, "Sine 1");
-        SampleDynamicSeries sine2Series = new SampleDynamicSeries(data, 1, "Sine 2");
+        mySeries = new ArrayList<>();
+        mySeries.add(new SampleDynamicSeries(0, "beacon"));
 
         // Creating the formatter for graph line 1
         LineAndPointFormatter formatter1 = new LineAndPointFormatter(
@@ -98,20 +104,9 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
         formatter1.getLinePaint().setStrokeWidth(10);
 
         // Add serie 1 to the plot
-        dynamicPlot.addSeries(sine1Series,
+        dynamicPlot.addSeries(mySeries.get(0),
                 formatter1);
 
-        // Creating the formatter for graph line 2
-        LineAndPointFormatter formatter2 =
-                new LineAndPointFormatter(Color.rgb(0, 0, 200), null, null, null);
-        formatter2.getLinePaint().setStrokeWidth(10);
-        formatter2.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
-
-        // Add serie 2 to the plot
-        dynamicPlot.addSeries(sine2Series, formatter2);
-
-        // Hook up the plotUpdater to the data model:
-        data.addObserver(plotUpdater);
 
         // thin out domain tick labels so they dont overlap each other:
         dynamicPlot.setDomainStepMode(StepMode.INCREMENT_BY_VAL);
@@ -133,6 +128,39 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
         dynamicPlot.getGraph().getRangeGridLinePaint().setPathEffect(dashFx);*/
 
     }
+
+    // ######### Menu ###############
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.my_options_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()) {
+            case R.id.start:
+                onRecording = true;
+                return true;
+            case R.id.stop:
+                onRecording = false;
+                return true;
+            case R.id.export:
+                for (SampleDynamicSeries x:mySeries)
+                {
+                    x.export();
+                }
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+
+    }
+    // ######### Menu ###############
+
 
     @Override
     protected void onDestroy() {
@@ -159,110 +187,15 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 
         }
     }
-    @Override
-    public void onResume() {
-        // kick off the data generating thread:
-        myThread = new Thread(data);
-        myThread.start();
-        super.onResume();
-    }
 
-    @Override
-    public void onPause() {
-        data.stopThread();
-        super.onPause();
-    }
-
-    // Class that generate the dynamic data
-    class SampleDynamicXYDatasource implements Runnable {
-
-        // encapsulates management of the observers watching this datasource for update events:
-        class MyObservable extends Observable {
-            @Override
-            public void notifyObservers() {
-                setChanged();
-                super.notifyObservers();
-            }
-        }
-
-
-        private ArrayList<Number> numbersY =                        // List of Y values
-                new ArrayList<Number>();
-        private MyObservable notifier;
-        private boolean keepRunning = false;                        // Thread is running or not
-        private int time = 0;                                       // Seconds from start
-
-
-
-        {
-            notifier = new MyObservable();
-        }
-
-        // Stop thread running cycle
-        public void stopThread() {
-            keepRunning = false;
-        }
-
-        // Make while cycle start
-        public void run() {
-            try {
-                keepRunning = true;
-                boolean isRising = true;
-                while (keepRunning) {
-
-                    Thread.sleep(1000); // decrease or remove to speed up the refresh rate.
-                    numbersY.add(new Random().nextInt(200)-100);
-                    time++;
-
-                    notifier.notifyObservers();
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        public int getItemCount(int series) {
-            return time;
-        }
-
-        public Number getX(int series, int index) {
-            if (index >= time) {
-                throw new IllegalArgumentException();
-            }
-            return index;
-        }
-
-        public Number getY(int series, int index) {
-            if (index >= time) {
-                throw new IllegalArgumentException();
-            }
-
-            switch(series){
-                case 0:
-                    return numbersY.get(index);
-                case 1:
-                    return -1*(int)numbersY.get(index);
-                default: return 0;
-            }
-        }
-
-        public void addObserver(Observer observer) {
-            notifier.addObserver(observer);
-        }
-
-        public void removeObserver(Observer observer) {
-            notifier.deleteObserver(observer);
-        }
-
-    }
 
     class SampleDynamicSeries implements XYSeries {
-        private SampleDynamicXYDatasource datasource;
-        private int seriesIndex;
-        private String title;
+        private ArrayList<Double> y_values;                             // y values of the series
+        private int seriesIndex;                                        // Index of the series in the series_array
+        private String title;                                           // Name of the serie
 
-        public SampleDynamicSeries(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
-            this.datasource = datasource;
+        public SampleDynamicSeries(int seriesIndex, String title) {
+            this.y_values = new ArrayList<>();
             this.seriesIndex = seriesIndex;
             this.title = title;
         }
@@ -274,17 +207,57 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 
         @Override
         public int size() {
-            return datasource.getItemCount(seriesIndex);
+            return y_values.size();
         }
 
         @Override
         public Number getX(int index) {
-            return datasource.getX(seriesIndex, index);
+            return index;
         }
 
         @Override
-        public Number getY(int index) {
-            return datasource.getY(seriesIndex, index);
+        public Number getY(int index) { return y_values.get(index); }
+
+        public void addElement(Double val)
+        {
+            y_values.add(val);
         }
+
+        public void resetSerie()
+        {
+            y_values.clear();
+        }
+
+        // Export the series in csv file
+        public boolean export()
+        {
+            File directoryDownload =
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            //Creates a new folder in DOWNLOAD directory
+            File logDir = new File (directoryDownload, "RSSItest");
+            logDir.mkdirs();
+
+            // Create new file
+            File file = new File(logDir, title+".csv");
+
+            FileOutputStream outputStream = null;
+            try
+            {
+                file.createNewFile();
+                outputStream = new FileOutputStream(file, true);
+                for (int i = 0; i < y_values.size(); i ++)
+                {
+                    outputStream.write((y_values.get(i) + "\n").getBytes());
+                }
+                outputStream.close();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                return false;
+            }
+            return true;
+        }
+
     }
 }
