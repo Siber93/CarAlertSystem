@@ -1,8 +1,12 @@
 package it.siber93.rssitest;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
@@ -119,13 +123,49 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
                 XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("###.#"));
 
         // Freeze the range boundaries:
-        dynamicPlot.setRangeBoundaries(-100, 100, BoundaryMode.FIXED);
+        dynamicPlot.setRangeBoundaries(-180, 0, BoundaryMode.FIXED);
 
-        // create a dash effect for domain and range grid lines:
-        /*DashPathEffect dashFx = new DashPathEffect(
-                new float[] {PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
-        dynamicPlot.getGraph().getDomainGridLinePaint().setPathEffect(dashFx);
-        dynamicPlot.getGraph().getRangeGridLinePaint().setPathEffect(dashFx);*/
+        new Thread(new Runnable() {
+            public void run() {
+                /*WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                wifi.startScan();
+                while(true) {
+                    try {
+
+                        ArrayList<ScanResult> results = (ArrayList<ScanResult>) wifi.getScanResults();
+                        for(int i=0; i<results.size(); i++)
+                        {
+                            if(results.get(i).SSID.equals("Telecom-85517507"))
+                            {
+                                mySeries.get(0).addElement((double) results.get(i).level);
+                                dynamicPlot.redraw();
+                                break;
+                            }
+                        }
+
+                        Thread.sleep(100);
+                    }
+                    catch (Exception e)
+                    {
+
+                    }
+                }*/
+                while(true)
+                {
+                    try {
+                        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                        mySeries.get(0).addElement((double) wifiInfo.getRssi());
+                        dynamicPlot.redraw();
+                        Thread.sleep(100);
+                    }
+                    catch (Exception e)
+                    {
+
+                    }
+                }
+            }
+        }).start();
 
     }
 
@@ -184,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
         }
         catch (RemoteException e)
         {
-
+            System.out.println(e.getMessage());
         }
     }
 

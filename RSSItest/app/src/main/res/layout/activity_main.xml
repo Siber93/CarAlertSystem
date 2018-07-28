@@ -16,6 +16,6 @@
         app:domainTitle="domain"
         app:lineLabelRotationBottom="-45"
         app:lineLabels="left|bottom"
-        app:rangeTitle="range"
+        app:rangeTitle="db"
         app:title="A Simple XY Plot" />
 </android.support.constraint.ConstraintLayout>
