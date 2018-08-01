@@ -39,6 +39,12 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
         WifiP2pManager.ConnectionInfoListener {
 
 
+    // Software modules enabler
+    public static final boolean LISTENER_MODULE = true;
+    public static final boolean PUBLISHER_MODULE = true;
+
+
+
     public static final String TAG = "wifidirectdemo";
 
     // TXT RECORD properties
@@ -56,6 +62,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
     private WifiP2pManager.Channel channel;
     private BroadcastReceiver receiver = null;
     private WifiP2pDnsSdServiceRequest serviceRequest;
+    WifiP2pDnsSdServiceInfo service;
 
     private Handler handler = new Handler(this);
     private WiFiChatFragment chatFragment;
@@ -99,7 +106,15 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
 
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
-        startRegistrationAndDiscovery();
+
+        if(PUBLISHER_MODULE) {
+            startRegistration();
+        }
+        if(LISTENER_MODULE) {
+            startDiscovery();
+        }
+
+
 
         servicesList = new WiFiDirectServicesList();
         getFragmentManager().beginTransaction()
@@ -135,13 +150,13 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
     }
 
     /**
-     * Registers a local service and then initiates a service discovery
+     * Register a local service with custom data
      */
-    private void startRegistrationAndDiscovery() {
+    private void startRegistration() {
         Map<String, String> record = new HashMap<String, String>();
         record.put(TXTRECORD_PROP_AVAILABLE, "visible");
 
-        WifiP2pDnsSdServiceInfo service = WifiP2pDnsSdServiceInfo.newInstance(
+        service = WifiP2pDnsSdServiceInfo.newInstance(
                 SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
         manager.addLocalService(channel, service, new WifiP2pManager.ActionListener() {
 
@@ -156,11 +171,33 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
             }
         });
 
-        discoverService();
+    }
+
+    /**
+     * Deregister local service on the network
+     */
+    private void stopRegistering() {
+
+        manager.removeLocalService(channel, service, new WifiP2pManager.ActionListener() {
+
+            @Override
+            public void onSuccess() {
+                appendStatus("Removed Local Service");
+            }
+
+            @Override
+            public void onFailure(int error) {
+                appendStatus("Failed to remove a service");
+            }
+        });
 
     }
 
-    private void discoverService() {
+
+    /**
+     * Start discovery of nearby devices
+     */
+    private void startDiscovery() {
 
         /*
          * Register listeners for DNS-SD services. These are callbacks invoked
