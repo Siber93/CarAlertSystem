@@ -39,7 +39,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
         WifiP2pManager.ConnectionInfoListener {
 
 
-    // Software modules enabler
+    // Software modules enablers
     public static final boolean LISTENER_MODULE = true;
     public static final boolean PUBLISHER_MODULE = true;
 
@@ -91,7 +91,20 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
             @Override
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                        .setAction("Begin listening", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                if(LISTENER_MODULE) {
+                                    // Check for other P2P devices on the network
+                                    startDiscovery();
+                                    // Initializing the fragmentlist with the device founded on the network
+                                    servicesList = new WiFiDirectServicesList();
+                                    // Show the fragment
+                                    getFragmentManager().beginTransaction()
+                                            .add(R.id.container_root, servicesList, "services").commit();
+                                }
+                            }
+                        }).show();
             }
         });
 
@@ -99,33 +112,27 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
 
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
-        intentFilter
-                .addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        intentFilter
-                .addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
 
+        // Get the Wifi Direct manager
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
+        // Get an initilized channel where to comunicate
         channel = manager.initialize(this, getMainLooper(), null);
 
         if(PUBLISHER_MODULE) {
+            // Publish this device on the network sending beacon
             startRegistration();
         }
-        if(LISTENER_MODULE) {
-            startDiscovery();
-        }
-
-
-
-        servicesList = new WiFiDirectServicesList();
-        getFragmentManager().beginTransaction()
-                .add(R.id.container_root, servicesList, "services").commit();
 
     }
     @Override
     protected void onRestart() {
-        Fragment frag = getFragmentManager().findFragmentByTag("services");
-        if (frag != null) {
-            getFragmentManager().beginTransaction().remove(frag).commit();
+        if(LISTENER_MODULE) {
+            Fragment frag = getFragmentManager().findFragmentByTag("services");
+            if (frag != null) {
+                getFragmentManager().beginTransaction().remove(frag).commit();
+            }
         }
         super.onRestart();
     }
@@ -153,6 +160,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
      * Register a local service with custom data
      */
     private void startRegistration() {
+        // Create the data that must be published
         Map<String, String> record = new HashMap<String, String>();
         record.put(TXTRECORD_PROP_AVAILABLE, "visible");
 
