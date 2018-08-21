@@ -122,7 +122,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
 
         if(PUBLISHER_MODULE) {
             // Publish this device on the network sending beacon
-            startRegistration();
+            serviceBroadcastingHandler.postDelayed(serviceBroadcastRunnable,200);
         }
 
     }
@@ -157,29 +157,58 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
     }
 
     /**
-     * Register a local service with custom data
+     * Handler for the thread/runnable of broadcasting
      */
-    private void startRegistration() {
-        // Create the data that must be published
-        Map<String, String> record = new HashMap<String, String>();
-        record.put(TXTRECORD_PROP_AVAILABLE, "visible");
+    private Handler serviceBroadcastingHandler = new Handler();
 
-        service = WifiP2pDnsSdServiceInfo.newInstance(
-                SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
-        manager.addLocalService(channel, service, new WifiP2pManager.ActionListener() {
 
-            @Override
-            public void onSuccess() {
-                appendStatus("Added Local Service");
-            }
+    /**
+     * Runnable that removes all the old services and registers a new one with custom data
+     * Recursive thread (5 sec tick)
+     */
+    private Runnable serviceBroadcastRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // Clear all the old services
+            manager.clearLocalServices(channel, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    // Give a feedback
+                    appendStatus("Services cleared");
 
-            @Override
-            public void onFailure(int error) {
-                appendStatus("Failed to add a service");
-            }
-        });
+                    // Create the data that must be published
+                    Map<String, String> record = new HashMap<String, String>();
+                    record.put(TXTRECORD_PROP_AVAILABLE, "visible");
 
-    }
+                    service = WifiP2pDnsSdServiceInfo.newInstance(
+                            SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
+                    manager.addLocalService(channel, service, new WifiP2pManager.ActionListener() {
+
+                        @Override
+                        public void onSuccess() {
+                            // Give a feedback
+                            appendStatus("Added Local Service");
+                            // Relaunch service broadcasting
+                            serviceBroadcastingHandler.postDelayed(serviceBroadcastRunnable, 5000);
+                        }
+
+                        @Override
+                        public void onFailure(int error) {
+                            appendStatus("Failed to add a service");
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(int i) {
+                    // Error, give a feedback
+                    appendStatus("Error on services cleaning");
+                }
+            });
+        }
+    };
+
+
 
     /**
      * Deregister local service on the network
