@@ -1,8 +1,10 @@
 package it.siber93.wifidiirectbroadcast;
 
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.DhcpInfo;
@@ -17,6 +19,7 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -34,65 +37,76 @@ import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 
-public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
-        WiFiDirectServicesList.DeviceClickListener, Handler.Callback, WiFiChatFragment.MessageTarget,
-        WifiP2pManager.ConnectionInfoListener {
+public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
 
 
-    // Software modules enablers
-    public static final boolean LISTENER_MODULE = true;
-    public static final boolean PUBLISHER_MODULE = true;
+    /**
+     * Software modules enablers
+     */
+    public static final boolean LISTENER_MODULE                         = true;
+    public static final boolean PUBLISHER_MODULE                        = true;
 
     /**
      * Indicates when the app is looking for other p2p devices
      */
-    public boolean isServiceDiscoveryActive = false;
+    public boolean isServiceDiscoveryActive                             = false;
     /**
      * Indicates if the local service is published on the network
      */
-    public boolean isServiceBroadcasting = false;
+    public boolean isServiceBroadcasting                                = false;
 
-    public static final String TAG = "wifidirectdemo";
+    public static final String TAG                                      = "wifidirectdemo";
 
     // TXT RECORD properties
-    public static final String TXTRECORD_PROP_SERVICE_INSTANCE          = "service";
-    public static final String TXTRECORD_PROP_AVAILABLE                 = "available";
-    public static final String TXTRECORD_PROP_POSITION                  = "position";
-    public static final String TXTRECORD_PROP_TIMESTAMP_POS             = "timestamp_pos";
-    public static final String TXTRECORD_PROP_ACCURACY                  = "accuracy";
-    public static final String TXTRECORD_PROP_TIMESTAMP                 = "timestamp";
-    public static final String TXTRECORD_PROP_DIRECTION                 = "direction";
-    public static final String TXTRECORD_PROP_SPEED                     = "speed";
+    public static final String TXTRECORD_PROP_SERVICE_INSTANCE          = "service";            // Service exposed in the TxtMap in order to improve discovery speed
+    public static final String TXTRECORD_PROP_AVAILABLE                 = "available";          // Reserved field
+    public static final String TXTRECORD_PROP_POSITION                  = "position";           // Last know longitude + latitude
+    public static final String TXTRECORD_PROP_TIMESTAMP_POS             = "timestamp_pos";      // Timestamp on which the position has been retrieved
+    public static final String TXTRECORD_PROP_ACCURACY                  = "accuracy";           // Position accuracy: each time the position estimation occurs the accuracy decrease. On GPS realignment it comes back to the maximum value
+    public static final String TXTRECORD_PROP_TIMESTAMP                 = "timestamp";          // Timestamp before start the notification. It is used to compare age of position (timestamp - timestamp_pos)
+    public static final String TXTRECORD_PROP_DIRECTION                 = "direction";          // Current human direction
+    public static final String TXTRECORD_PROP_SPEED                     = "speed";              // Current human speed
 
     public static final String SERVICE_INSTANCE                         = "_humanpresence";
     public static final String SERVICE_REG_TYPE                         = "_presence._tcp";
-    public int AUTOINCREMENT_NUMBER = 0;
+    /**
+     * Number that should be auto-incremented each time is used
+     */
+    public int AUTOINCREMENT_NUMBER                                     = 0;
 
-    public static final int MESSAGE_READ = 0x400 + 1;
-    public static final int MY_HANDLE = 0x400 + 2;
+    public static final int MESSAGE_READ                                = 0x400 + 1;
+    public static final int MY_HANDLE                                   = 0x400 + 2;
+
     private WifiP2pManager manager;
 
-    static final int SERVER_PORT = 4545;
 
-    private final IntentFilter intentFilter = new IntentFilter();
+    static final int SERVER_PORT                                        = 4545;
+
+    private final IntentFilter intentFilter                             = new IntentFilter();
     private WifiP2pManager.Channel channel;
-    private BroadcastReceiver receiver = null;
+    private BroadcastReceiver receiver                                  = null;
     private WifiP2pDnsSdServiceRequest serviceRequest;
     WifiP2pDnsSdServiceInfo service;
 
-    private Handler handler = new Handler(this);
-    private WiFiChatFragment chatFragment;
+    //private Handler handler = new Handler(this);
+    //private WiFiChatFragment chatFragment;
+    /**
+     * List of all the discovered device
+     */
     private WiFiDirectServicesList servicesList;
 
+    /**
+     * TextView of the graphic log
+     */
     private TextView statusTxtView;
 
-    public Handler getHandler() {
+    /*public Handler getHandler() {
         return handler;
-    }
+    }*/
 
-    public void setHandler(Handler handler) {
+    /*public void setHandler(Handler handler) {
         this.handler = handler;
-    }
+    }*/
 
 
     @Override
@@ -112,30 +126,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
                                 new View.OnClickListener() {
                                     @Override
                                     public void onClick(View view) {
-                                        /*if(LISTENER_MODULE) {
-                                            // Check if the discovery is already running
-                                            if (!isServiceDiscoveryActive) {
-                                                // Check for other P2P devices on the network
-                                                prepareServiceDiscovery();
-                                                startServiceDiscovery();
-                                                // Initializing the fragmentlist with the device founded on the network
-                                                servicesList = new WiFiDirectServicesList();
-                                                // Show the fragment
-                                                getFragmentManager().beginTransaction()
-                                                        .add(R.id.devices_root, servicesList, "services").commit();
-
-                                            }else{
-                                                // Clear all the devices discovered in the adapterlist
-                                                WiFiDirectServicesList fragment = (WiFiDirectServicesList) getFragmentManager()
-                                                        .findFragmentByTag("services");
-                                                WiFiDirectServicesList.WiFiDevicesAdapter adapter = ((WiFiDirectServicesList.WiFiDevicesAdapter) fragment
-                                                        .getListAdapter());
-                                                adapter.clear();
-                                                adapter.notifyDataSetChanged();
-                                            }
-                                            // Toggle boolean discovery variable (NOT == disable discovery)
-                                            isServiceDiscoveryActive = !isServiceDiscoveryActive;
-                                        }*/
+                                        // TODO: Implement or delete the button
                                     }
                                 }).show();
             }
@@ -149,40 +140,10 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
 
         // Get the Wifi Direct manager
-        manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
+        manager = (WifiP2pManager) getApplicationContext().getSystemService(Context.WIFI_P2P_SERVICE);
+
         // Get an initialized channel where to communicate
         channel = manager.initialize(this, getMainLooper(), null);
-
-        if(PUBLISHER_MODULE) {
-            // Publish this device on the network sending beacon
-            serviceBroadcastingHandler.postDelayed(serviceBroadcastRunnable,200);
-        }
-        if(LISTENER_MODULE) {
-            // Initiates callbacks for service discovery
-            prepareServiceDiscovery();
-            // Check if the discovery is already running
-            if (!isServiceDiscoveryActive) {
-                // Check for other P2P devices on the network
-                prepareServiceDiscovery();
-                startServiceDiscovery();
-                // Initializing the fragmentlist with the device founded on the network
-                servicesList = new WiFiDirectServicesList();
-                // Show the fragment
-                getFragmentManager().beginTransaction()
-                        .add(R.id.devices_root, servicesList, "services").commit();
-
-            }else{
-                // Clear all the devices discovered in the adapterlist
-                WiFiDirectServicesList fragment = (WiFiDirectServicesList) getFragmentManager()
-                        .findFragmentByTag("services");
-                WiFiDirectServicesList.WiFiDevicesAdapter adapter = ((WiFiDirectServicesList.WiFiDevicesAdapter) fragment
-                        .getListAdapter());
-                adapter.clear();
-                adapter.notifyDataSetChanged();
-            }
-            // Toggle boolean discovery variable (NOT == disable discovery)
-            isServiceDiscoveryActive = !isServiceDiscoveryActive;
-        }
 
     }
     @Override
@@ -441,7 +402,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
 
     }
 
-    @Override
+    /*@Override
     public void connectP2p(WiFiP2pService service) {
         WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = service.device.deviceAddress;
@@ -471,9 +432,9 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
                 appendStatus("Failed connecting to service");
             }
         });
-    }
+    }*/
 
-    @Override
+    /*@Override
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
             case MESSAGE_READ:
@@ -490,29 +451,97 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
 
         }
         return true;
-    }
+    }*/
 
     @Override
     public void onResume() {
         super.onResume();
-        receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
-        registerReceiver(receiver, intentFilter);
+        // Check if discovery service has been enabled
+        if(isServiceDiscoveryActive) {
+            receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
+            registerReceiver(receiver, intentFilter);
+        }else{
+            // Check if discovery service can be enabled now
+            // Check if wifi is enabled
+            WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (!wifi.isWifiEnabled()){
+                // Ask for enabling it
+                AlertDialog.Builder builder = new AlertDialog.Builder(
+                        this);
+                builder.setTitle("Save the Humanity");
+                builder.setMessage("The Wifi service is off. Do you want to turn it on?");
+                builder.setPositiveButton("Enable Wifi",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(
+                                    final DialogInterface dialogInterface,
+                                    final int i) {
+                                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+                            }
+                        });
+                builder.setNegativeButton("Exit",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                System.exit(0);
+                            }
+                        });
+                builder.show();
+            }else{
+                // Start publishing + discovery
+                if(PUBLISHER_MODULE) {
+                    // Publish this device on the network sending beacon
+                    serviceBroadcastingHandler.postDelayed(serviceBroadcastRunnable,200);
+                }
+                if(LISTENER_MODULE) {
+                    // Initiates callbacks for service discovery
+                    prepareServiceDiscovery();
+                    // Check if the discovery is already running
+                    if (!isServiceDiscoveryActive) {
+                        // Check for other P2P devices on the network
+                        prepareServiceDiscovery();
+                        startServiceDiscovery();
+                        // Initializing the fragmentlist with the device founded on the network
+                        servicesList = new WiFiDirectServicesList();
+                        // Show the fragment
+                        getFragmentManager().beginTransaction()
+                                .add(R.id.devices_root, servicesList, "services").commit();
+
+                    }else{
+                        // Clear all the devices discovered in the adapterlist
+                        WiFiDirectServicesList fragment = (WiFiDirectServicesList) getFragmentManager()
+                                .findFragmentByTag("services");
+                        WiFiDirectServicesList.WiFiDevicesAdapter adapter = ((WiFiDirectServicesList.WiFiDevicesAdapter) fragment
+                                .getListAdapter());
+                        adapter.clear();
+                        adapter.notifyDataSetChanged();
+                    }
+                    // Toggle boolean discovery variable (NOT == disable discovery)
+                    isServiceDiscoveryActive = !isServiceDiscoveryActive;
+                }
+            }
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        unregisterReceiver(receiver);
+        if(receiver != null) {
+            unregisterReceiver(receiver);
+            // Block discovery thread
+            isServiceDiscoveryActive = false;
+        }
     }
 
-    @Override
+
+    /*
+     * The group owner accepts connections using a server socket and then spawns a
+     * client socket for every client. This is handled by {@code
+     * GroupOwnerSocketHandler}
+     */
+    /*@Override
     public void onConnectionInfoAvailable(WifiP2pInfo p2pInfo) {
         Thread handler = null;
-        /*
-         * The group owner accepts connections using a server socket and then spawns a
-         * client socket for every client. This is handled by {@code
-         * GroupOwnerSocketHandler}
-         */
 
         if (p2pInfo.isGroupOwner) {
             Log.d(TAG, "Connected as group owner");
@@ -536,8 +565,12 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements
         getFragmentManager().beginTransaction()
                 .replace(R.id.container_root, chatFragment).commit();
         statusTxtView.setVisibility(View.GONE);
-    }
+    }*/
 
+    /**
+     * Append a line of text to the head of the displayed log in the main activity
+     * @param status Line to append
+     */
     public void appendStatus(String status) {
         String current = statusTxtView.getText().toString();
         statusTxtView.setText(status + "\n" + current);
