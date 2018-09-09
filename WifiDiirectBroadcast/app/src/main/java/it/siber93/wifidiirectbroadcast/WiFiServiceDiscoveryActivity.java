@@ -76,6 +76,8 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
 
     public static final int MESSAGE_READ                                = 0x400 + 1;
     public static final int MY_HANDLE                                   = 0x400 + 2;
+    public static final int PUBLISH_TIME                                = 10000;
+    public static final int DISCOVERY_TIME                              = 10000;
 
     private WifiP2pManager manager;
 
@@ -218,7 +220,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                             // Relaunch service broadcasting
                             serviceBroadcastingHandler.postDelayed(
                                     serviceBroadcastRunnable,
-                                    4000);
+                                    PUBLISH_TIME);
                         }
 
                         @Override
@@ -374,7 +376,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                                                         Log.d("Discovery","[D] Service discovery initiated");
                                                         serviceDiscoveringHandler.postDelayed(
                                                                 serviceDiscoveringRunnable,
-                                                                5000);
+                                                                DISCOVERY_TIME);
                                                     }
 
                                                     @Override
