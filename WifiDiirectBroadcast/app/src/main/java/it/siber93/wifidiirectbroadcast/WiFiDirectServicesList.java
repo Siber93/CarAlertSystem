@@ -79,7 +79,7 @@ public class WiFiDirectServicesList extends ListFragment {
                 }
                 TextView statusText = (TextView) v
                         .findViewById(android.R.id.text2);
-                statusText.setText(getDeviceStatus(service.device.status) + " " + service.position);
+                statusText.setText(getDeviceStatus(service.device.status) + " " + service.latitude);
             }
             return v;
         }

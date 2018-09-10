@@ -34,8 +34,12 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.locks.Lock;
 
 public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
 
@@ -60,15 +64,23 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
     // TXT RECORD properties
     public static final String TXTRECORD_PROP_SERVICE_INSTANCE          = "service";            // Service exposed in the TxtMap in order to improve discovery speed
     public static final String TXTRECORD_PROP_AVAILABLE                 = "available";          // Reserved field
-    public static final String TXTRECORD_PROP_POSITION                  = "position";           // Last know longitude + latitude
+    public static final String TXTRECORD_PROP_LONG                      = "longitude";          // Last know longitude
+    public static final String TXTRECORD_PROP_LAT                       = "latitude";           // Last know latitude
     public static final String TXTRECORD_PROP_TIMESTAMP_POS             = "timestamp_pos";      // Timestamp on which the position has been retrieved
     public static final String TXTRECORD_PROP_ACCURACY                  = "accuracy";           // Position accuracy: each time the position estimation occurs the accuracy decrease. On GPS realignment it comes back to the maximum value
     public static final String TXTRECORD_PROP_TIMESTAMP                 = "timestamp";          // Timestamp before start the notification. It is used to compare age of position (timestamp - timestamp_pos)
-    public static final String TXTRECORD_PROP_DIRECTION                 = "direction";          // Current human direction
-    public static final String TXTRECORD_PROP_SPEED                     = "speed";              // Current human speed
+    public static final String TXTRECORD_PROP_DIRECTION                 = "direction";          // Current human direction (angle from the North)
+    public static final String TXTRECORD_PROP_SPEED                     = "speed";              // Current human speed (m/s)
 
     public static final String SERVICE_INSTANCE                         = "_humanpresence";
     public static final String SERVICE_REG_TYPE                         = "_presence._tcp";
+
+
+    public ArrayList<WiFiP2pService> humans_discovered                  = new ArrayList<WiFiP2pService>();           // List of all devices recently discovered that must be processed
+    public ArrayList<WiFiP2pService> humans_reported                    = new ArrayList<WiFiP2pService>();           // List of all devices that have been reported in the map
+
+
+
     /**
      * Number that should be auto-incremented each time is used
      */
@@ -202,7 +214,8 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                     Map<String, String> record = new HashMap<String, String>();
                     record.put(TXTRECORD_PROP_SERVICE_INSTANCE, SERVICE_INSTANCE);
                     record.put(TXTRECORD_PROP_AVAILABLE, "visible");
-                    record.put(TXTRECORD_PROP_POSITION, String.valueOf(AUTOINCREMENT_NUMBER++));
+                    record.put(TXTRECORD_PROP_LONG, String.valueOf(AUTOINCREMENT_NUMBER++));
+                    record.put(TXTRECORD_PROP_LAT, String.valueOf(AUTOINCREMENT_NUMBER++));
                     record.put(TXTRECORD_PROP_ACCURACY, String.valueOf(AUTOINCREMENT_NUMBER++));
                     record.put(TXTRECORD_PROP_TIMESTAMP, String.valueOf(AUTOINCREMENT_NUMBER++));
                     record.put(TXTRECORD_PROP_TIMESTAMP_POS, String.valueOf(AUTOINCREMENT_NUMBER++));
@@ -285,37 +298,60 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                                         .getListAdapter());
                                 boolean found = false;
 
-                                // Search if this device with this service already exists in the list
-                                for(int i = 0; i < adapter.getCount(); i++)
+                                // Search if this device with this service already exists in the list of the discovered
+                                for(int i = 0; i < humans_discovered.size(); i++)
                                 {
+                                    // Block the resources in order to read it values
+                                    humans_discovered.get(i).Lock();
                                     // Compare MAC address
-                                    if(adapter.getItem(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress) )
+                                    if(humans_discovered.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress) )
                                     {
                                         // Update values for this entity
-                                        adapter.getItem(i).device = device;
-                                        adapter.getItem(i).instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
-                                        adapter.getItem(i).accuracy = record.get(TXTRECORD_PROP_ACCURACY);
-                                        adapter.getItem(i).direction = record.get(TXTRECORD_PROP_DIRECTION);
-                                        adapter.getItem(i).position = record.get(TXTRECORD_PROP_POSITION);
-                                        adapter.getItem(i).speed = record.get(TXTRECORD_PROP_SPEED);
-                                        adapter.getItem(i).timestamp = record.get(TXTRECORD_PROP_TIMESTAMP);
-                                        adapter.getItem(i).timestampPos = record.get(TXTRECORD_PROP_TIMESTAMP_POS);
+                                        humans_discovered.get(i).device = device;
+                                        humans_discovered.get(i).instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
+                                        humans_discovered.get(i).accuracy = record.get(TXTRECORD_PROP_ACCURACY);
+                                        humans_discovered.get(i).direction = record.get(TXTRECORD_PROP_DIRECTION);
+                                        humans_discovered.get(i).longitude = record.get(TXTRECORD_PROP_LONG);
+                                        humans_discovered.get(i).latitude = record.get(TXTRECORD_PROP_LAT);
+                                        humans_discovered.get(i).speed = record.get(TXTRECORD_PROP_SPEED);
+                                        humans_discovered.get(i).timestamp = record.get(TXTRECORD_PROP_TIMESTAMP);
+                                        humans_discovered.get(i).timestampPos = record.get(TXTRECORD_PROP_TIMESTAMP_POS);
                                         found = true;
+                                        humans_discovered.get(i).Unlock();
                                         break;
                                     }
+                                    humans_discovered.get(i).Unlock();
+                                }
+                                // Search if this device with this service already exists in the list of the reported
+                                for(int i = 0; i < humans_reported.size(); i++)
+                                {
+                                    // Block the resources in order to read it values
+                                    humans_reported.get(i).Lock();
+                                    // Compare MAC address
+                                    if(humans_reported.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress) )
+                                    {
+                                        // Delete it and the report it again
+                                        humans_reported.get(i).obsolate  = true;
+                                        humans_reported.get(i).Unlock();
+                                        break;
+                                    }
+                                    humans_reported.get(i).Unlock();
                                 }
                                 if(!found) {
+                                    // If not found, create it and add it to the discovered list
                                     WiFiP2pService service = new WiFiP2pService();
 
                                     service.device = device;
                                     service.instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
                                     service.accuracy = record.get(TXTRECORD_PROP_ACCURACY);
                                     service.direction = record.get(TXTRECORD_PROP_DIRECTION);
-                                    service.position = record.get(TXTRECORD_PROP_POSITION);
+                                    service.longitude = record.get(TXTRECORD_PROP_LONG);
+                                    service.latitude = record.get(TXTRECORD_PROP_LAT);
                                     service.speed = record.get(TXTRECORD_PROP_SPEED);
                                     service.timestamp = record.get(TXTRECORD_PROP_TIMESTAMP);
                                     service.timestampPos = record.get(TXTRECORD_PROP_TIMESTAMP_POS);
 
+                                    humans_discovered.add(service);
                                     adapter.add(service);
                                 }
                                 adapter.notifyDataSetChanged();
@@ -400,9 +436,28 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                         appendStatus("[D-Err] Service request removing failed");
                     }
                 });
-
-
     }
+
+    /**
+     * Handler for the thread/runnable of humans lists cleaning
+     */
+    private Handler cleaningThreadHandler = new Handler();
+
+
+    /**
+     * Runnable that removes all the old humans data from the lists
+     * Recursive thread (5 sec tick)
+     */
+    private Runnable cleaningThreadRunnable = new Runnable() {
+        @Override
+        public void run() {
+
+        }
+    };
+
+
+
+
 
     /*@Override
     public void connectP2p(WiFiP2pService service) {
