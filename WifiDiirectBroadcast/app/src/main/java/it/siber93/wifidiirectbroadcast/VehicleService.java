@@ -14,16 +14,21 @@ import java.util.ArrayList;
 
 public class VehicleService implements LocationListener {
 
+    //region CONSTAMTS
     private static final int WIFI_MAX_RANGE = 60;                                                      // Max wifi covering range
     private static final int LOCATION_OBSOLETE_TIME = 1000 * 5;                                        // Time after that a location must be considered obsolete
+    public static final ArrayList<LatLng> route = new ArrayList<>();                                   // List of all point belonging to the Encoded polyline of the car trip
+    //endregion
 
-    public static ArrayList<LatLng> route = new ArrayList<>();                                         // List of all point belonging to the Encoded polyline of the car trip
-
+    //region PROPERTIES
     private Location lastLocationSaved = null;                                                         // Get the location before the current one
 
     private Location currentLocation = null;                                                           // Current Vehicle location
 
     private Context context = null;                                                                    // Application context
+    //endregion
+
+    //region CONSTRUCTORS
 
     /**
      * Constructor
@@ -35,7 +40,55 @@ public class VehicleService implements LocationListener {
         }
         context = cntx;
     }
+    //endregion
 
+    //region GETTERS
+
+
+    /**
+     * Get last known position of the vehicle
+     * @return LatLng Object
+     */
+    public LatLng getCurrentPosition() {
+        return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+    }
+
+
+    /**
+     * Get last saved position of the vehicle
+     * @return LatLng Object
+     */
+    public LatLng getLastSavedPosition() {
+        return new LatLng(lastLocationSaved.getLatitude(),lastLocationSaved.getLongitude());
+    }
+
+
+
+    /**
+     * Calculate the exact polyline segment where the vehicle is going on
+     * @return First Polyline segment point position
+     */
+    public int getCurrentPolylineSegment() {
+        LatLng loc = getCurrentPosition();
+        double minD = getPointSegmentProjectionDistance(route.get(0),route.get(1),loc);
+        int index = 0;
+
+        for(int i = 1; i < route.size()-1; i++ )
+        {
+            double d = getPointSegmentProjectionDistance(route.get(i),route.get(i+1),loc);
+            if(d<minD)
+            {
+                index = i;
+                minD=d;
+            }
+        }
+
+        return index;
+    }
+
+    //endregion
+
+    //region SPEED_CALCULATION
 
     /**
      * Get the last know speed of this vehicle
@@ -49,36 +102,7 @@ public class VehicleService implements LocationListener {
             {
                 return currentLocation.getSpeed();
             }else{
-                // Convert degrees to radians
-                double lat1 = lastLocationSaved.getLatitude() * Math.PI / 180.0;
-                double lon1 = lastLocationSaved.getLongitude() * Math.PI / 180.0;
-
-                double lat2 = currentLocation.getLatitude() * Math.PI / 180.0;
-                double lon2 = currentLocation.getLongitude() * Math.PI / 180.0;
-
-                // radius of earth in metres
-                double r = 6378100;
-
-                // P
-                double rho1 = r * Math.cos(lat1);
-                double z1 = r * Math.sin(lat1);
-                double x1 = rho1 * Math.cos(lon1);
-                double y1 = rho1 * Math.sin(lon1);
-
-                // Q
-                double rho2 = r * Math.cos(lat2);
-                double z2 = r * Math.sin(lat2);
-                double x2 = rho2 * Math.cos(lon2);
-                double y2 = rho2 * Math.sin(lon2);
-
-                // Dot product
-                double dot = (x1 * x2 + y1 * y2 + z1 * z2);
-                double cos_theta = dot / (r * r);
-
-                double theta = Math.acos(cos_theta);
-
-                // Distance in Metres
-                double dist = r * theta;
+                double dist = getLocationsDistance(getLastSavedPosition(),getCurrentPosition());
 
                 // Calculate speed
                 double time_s = (currentLocation.getTime() - lastLocationSaved.getTime()) / 1000.0;
@@ -89,23 +113,103 @@ public class VehicleService implements LocationListener {
     }
 
 
+    //endregion
+
+
+    //region DISTANCE
+
     /**
-     * Get last known position of the vehicle
-     * @return LatLng Object
+     * Get the distance between 2 coordinates points
+     * @param l1 Point 1
+     * @param l2 Point 2
+     * @return Distance in meters
      */
-    public LatLng getCurrentPosition() {
-        return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+    public double getLocationsDistance(LatLng l1,LatLng l2)
+    {
+        // Convert degrees to radians
+        double lat1 = l1.latitude * Math.PI / 180.0;
+        double lon1 = l1.longitude * Math.PI / 180.0;
+
+        double lat2 = l2.latitude * Math.PI / 180.0;
+        double lon2 = l2.longitude * Math.PI / 180.0;
+
+        // radius of earth in metres
+        double r = 6378100;
+
+        // P
+        double rho1 = r * Math.cos(lat1);
+        double z1 = r * Math.sin(lat1);
+        double x1 = rho1 * Math.cos(lon1);
+        double y1 = rho1 * Math.sin(lon1);
+
+        // Q
+        double rho2 = r * Math.cos(lat2);
+        double z2 = r * Math.sin(lat2);
+        double x2 = rho2 * Math.cos(lon2);
+        double y2 = rho2 * Math.sin(lon2);
+
+        // Dot product
+        double dot = (x1 * x2 + y1 * y2 + z1 * z2);
+        double cos_theta = dot / (r * r);
+
+        double theta = Math.acos(cos_theta);
+
+        // Distance in Metres
+        return r * theta;
     }
 
 
+
     /**
-     * Calculate the exact polyline segment where the vehicle is going on
-     * @return 2 LatLng Objects
+     * Given a segment and a point this function return the distance point-segment if the point is
+     * on the segment, otherwise tha distance to the nearest edge of the segment.
+     * REFERENCE https://stackoverflow.com/questions/49061521/projection-of-a-point-to-a-line-segment-python-shapely
+     * @param s1 First segment point
+     * @param s2 Second segment point
+     * @param p Point tha must be projected
+     * @return point-segment distance
      */
-    public ArrayList<LatLng> getCurrentPolylineSegment() {
-        // TODO: Implementare
-        return null;
+    public double getPointSegmentProjectionDistance(LatLng s1, LatLng s2, LatLng p)
+    {
+        double u[] = {s1.latitude,s1.longitude};
+        double v[] = {s2.latitude,s2.longitude};
+        double x[] = {p.latitude,p.longitude};
+
+        Vector uv = new Vector(new double[]{v[0] - u[0], v[1] - u[1]});
+        Vector xu = new Vector(new double[]{u[0] - x[0], u[1] - x[1]});
+
+        double d = uv.dot(xu)/uv.magnitude();
+
+        double new_p[] = {
+                u[0] + d * uv.cartesian(0)/uv.magnitude(),
+                u[1] + d * uv.cartesian(1)/uv.magnitude()
+        } ;
+
+        double px = (new_p[0]- v[0])/(u[0] - v[0]);
+        double py = (new_p[1]- v[1])/(u[1] - v[1]);
+
+        // Distance must be in meters and not in latlng difference, so convert it
+        if(px == py)
+        {
+            // Point on the segment
+            return getLocationsDistance(new LatLng(px,py),p);
+        }
+        else {
+            // Point out of the segment
+            // Give back the distance to the nearest edge of the segment
+            return Math.abs(
+                    Math.min(
+                            getLocationsDistance(s2,p),
+                            getLocationsDistance(s1,p)
+                    )
+            );
+        }
     }
+
+    //endregion
+
+
+    //region INTERSECTION_CHECK
 
     /**
      * Check if the human will intersect the vehicle
@@ -113,23 +217,45 @@ public class VehicleService implements LocationListener {
      * @return True -> Intersection
      */
     public boolean willHumanIntersectVehicle(HumanService h) {
-
-        // Get current segment points (exactly 2)
-        ArrayList<LatLng> currentSegment = getCurrentPolylineSegment();
-        if (currentSegment.size() >= 2) {
-            doIntersect(
-                    currentSegment.get(0),                                                  // P1 of the vehicle
-                    currentSegment.get(1),                                                  // P2 of the vehicle
-                    new LatLng(h.latitude, h.longitude),                                     // P1 of the human
-                    h.getHumanPositionIn((int) Math.ceil(WIFI_MAX_RANGE / getCurrentSpeed()))  // P2 of the human (estimated)
-            );
+        LatLng loc = getCurrentPosition();
+        int start = getCurrentPolylineSegment();
+        int end = start;
+        // Search indexes on which check intersection
+        for(int i = start; i < route.size()-1; i++)
+        {
+            double d = getPointSegmentProjectionDistance(route.get(i),route.get(i+1),loc);
+            if(d < WIFI_MAX_RANGE)
+            {
+                end = i+1;
+            }else{
+                break;
+            }
+        }
+        if(end ==  start)
+        {
+            // error, no <60m away segments
         }
 
-        return false;
+        // Intersection check
+        for(int i = start; i < end; i++)
+        {
+            if(doIntersect(
+                    route.get(i),                                                               // P1 of the vehicle
+                    route.get(i+1),                                                             // P2 of the vehicle
+                    new LatLng(h.latitude, h.longitude),                                        // P1 of the human
+                    h.getHumanPositionIn((int) Math.ceil(WIFI_MAX_RANGE / getCurrentSpeed()))  // P2 of the human (estimated)
+            ))
+            {
+                return true;
+            }
+        }
+        return false;       // No intersections
     }
 
 
-    // A C++ program to check if two given line segments intersect
+
+
+    // Check if two given line segments intersect
 
     // Given three colinear points p, q, r, the function checks if
     // point q lies on line segment 'pr'
@@ -187,7 +313,10 @@ public class VehicleService implements LocationListener {
         return false; // Doesn't fall in any of the above cases
     }
 
+    //endregion
 
+
+    //region LOCATION_LISTENER
     @Override
     public void onLocationChanged(Location location) {
 
@@ -200,6 +329,7 @@ public class VehicleService implements LocationListener {
         // Check if the new location is better then older one
         if(isBetterLocation(location,currentLocation))
         {
+            // TODO Man mano che vado avanti con la posizione cancello i segmenti di polyline vecchi
             lastLocationSaved = currentLocation;
             currentLocation = location;
         }
@@ -242,6 +372,8 @@ public class VehicleService implements LocationListener {
             locationManager.removeUpdates(this);
         }
     }
+
+
 
 
     /** Determines whether one Location reading is better than the current Location fix
@@ -298,6 +430,6 @@ public class VehicleService implements LocationListener {
         return provider1.equals(provider2);
     }
 
-
+    //endregion
 
 }
