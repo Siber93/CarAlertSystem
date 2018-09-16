@@ -6,19 +6,19 @@ package it.siber93.wifidiirectbroadcast;
 public class HumanLocalService {
 
     double getCurrentLongitude(){
-        return 0;
+        return 10.57833;
     }
 
     double getCurrentLatitude(){
-        return 0;
+        return 44.74240;
     }
 
     long getCurrentPositionTimeStamp(){
-        return 0;
+        return System.currentTimeMillis();
     }
 
     double getAccuracy(){
-        return 0;
+        return 1;
     }
 
     double getCurrentBearing(){
@@ -26,7 +26,7 @@ public class HumanLocalService {
     }
 
     double getCurrentspeed(){
-        return 0;
+        return 2;
     }
 
 

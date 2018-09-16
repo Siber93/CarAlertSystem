@@ -156,8 +156,8 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
 
 
         // Human switch button initialization
-        swh = (Switch) findViewById(R.id.switchV);
-        swv.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        swh = (Switch) findViewById(R.id.switchH);
+        swh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 HUMAN_MODULE = b;
@@ -473,26 +473,17 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                         Log.d("Discovery","[D] Service request removing completed");
                         if(!VEHICLE_MODULE && !HUMAN_MODULE) {
                             // Disable service discovery
-                            appendStatus("[D] Vehicle mode stopped");
+                            appendStatus("[D] Vehicle/Human mode stopped");
                             if(swv != null)
                             {
                                 // Enable switch button again
                                 swv.setEnabled(true);
-                            }
-
-                            return;
-                        }
-                        if(!HUMAN_MODULE) {
-                            // Disable service discovery
-                            appendStatus("[D] Human mode stopped");
-                            if(swh != null)
-                            {
-                                // Enable switch button again
                                 swh.setEnabled(true);
                             }
 
                             return;
                         }
+
                         // Creating new service request to broadcast
                         manager.addServiceRequest(channel, serviceRequest,
                                 new WifiP2pManager.ActionListener() {

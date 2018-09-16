@@ -2,6 +2,7 @@ package it.siber93.wifidiirectbroadcast;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -14,15 +15,29 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class VehicleService implements LocationListener {
 
     //region CONSTAMTS
     private static final int WIFI_MAX_RANGE = 60;                                                      // Max wifi covering range
     private static final int LOCATION_OBSOLETE_TIME = 1000 * 5;                                        // Time after that a location must be considered obsolete
-    public static final ArrayList<LatLng> route = new ArrayList<>();                                   // List of all point belonging to the Encoded polyline of the car trip
+    public static final List<LatLng> route = Arrays.asList(
+            new LatLng(44.74313,10.58337),
+            new LatLng(44.74310,10.58323),
+            new LatLng(44.74299,10.58305),
+            new LatLng(44.74225,10.58195),
+            new LatLng(44.74212,10.58178),
+            new LatLng(44.74150,10.58092),
+            new LatLng(44.74161,10.58051),
+            new LatLng(44.74186,10.57980),
+            new LatLng(44.74235,10.57839),
+            new LatLng(44.74261,10.57766)
+    );                                   // List of all point belonging to the Encoded polyline of the car trip
     //endregion
 
     //region PROPERTIES
@@ -52,6 +67,7 @@ public class VehicleService implements LocationListener {
         }
         context = cntx;
         gMap = gmap;
+        gmap.addPolyline(new PolylineOptions().addAll(route).color(Color.BLUE).width(10));
         start();
     }
 
@@ -183,7 +199,7 @@ public class VehicleService implements LocationListener {
         double lon2 = l2.longitude * Math.PI / 180.0;
 
         // radius of earth in metres
-        double r = 6378100;
+        double r = 6378137;
 
         // P
         double rho1 = r * Math.cos(lat1);
