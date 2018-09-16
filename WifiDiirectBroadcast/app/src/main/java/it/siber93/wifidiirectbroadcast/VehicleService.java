@@ -8,7 +8,12 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
 
@@ -25,8 +30,15 @@ public class VehicleService implements LocationListener {
 
     private Location currentLocation = null;                                                           // Current Vehicle location
 
-    private Context context = null;                                                                    // Application context
-    //endregion
+    public Context context = null;                                                                     // Application context
+
+
+    private GoogleMap gMap = null;                                                                     // Google map to update when necessary
+
+    private Marker posMarker = null;                                                                   // Marker of the vehicle current position
+
+
+    // endregion
 
     //region CONSTRUCTORS
 
@@ -34,11 +46,48 @@ public class VehicleService implements LocationListener {
      * Constructor
      * @param cntx Application context
      */
-    public VehicleService(Context cntx) {
-        if (context == null) {
+    public VehicleService(Context cntx, GoogleMap gmap) {
+        if (cntx == null || gmap == null) {
             throw new SecurityException("Context is null");
         }
         context = cntx;
+        gMap = gmap;
+        start();
+    }
+
+    /**
+     * Start the position listening
+     */
+    public void start()
+    {
+        //Acquire a reference to the system Location Manager
+        LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        if (locationManager != null) {
+            // Check permission
+            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // Permission is not granted
+
+
+                return;
+            }
+            // Add listener
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+        }
+    }
+
+    /**
+     * Stop the position listening
+     */
+    public void stop()
+    {
+        //Acquire a reference to the system Location Manager
+        LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        if(locationManager != null)
+        {
+            // Remove listener
+            locationManager.removeUpdates(this);
+        }
     }
     //endregion
 
@@ -162,7 +211,7 @@ public class VehicleService implements LocationListener {
 
     /**
      * Given a segment and a point this function return the distance point-segment if the point is
-     * on the segment, otherwise tha distance to the nearest edge of the segment.
+     * on the segment, otherwise the distance to the nearest edge of the segment.
      * REFERENCE https://stackoverflow.com/questions/49061521/projection-of-a-point-to-a-line-segment-python-shapely
      * @param s1 First segment point
      * @param s2 Second segment point
@@ -324,6 +373,17 @@ public class VehicleService implements LocationListener {
         {
             currentLocation = location;
             lastLocationSaved = location;
+            // Change Position in the map
+            if(posMarker == null)
+            {
+                posMarker = gMap.addMarker(new MarkerOptions()
+                        .position(getCurrentPosition())
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.car))
+                        .draggable(false));
+            }else{
+                posMarker.setPosition(getCurrentPosition());
+            }
+            gMap.moveCamera(CameraUpdateFactory.newLatLng(getCurrentPosition()));
         }
 
         // Check if the new location is better then older one
@@ -332,6 +392,16 @@ public class VehicleService implements LocationListener {
             // TODO Man mano che vado avanti con la posizione cancello i segmenti di polyline vecchi
             lastLocationSaved = currentLocation;
             currentLocation = location;
+            // Change Position in the map
+            if(posMarker == null)
+            {
+                posMarker = gMap.addMarker(new MarkerOptions()
+                        .position(getCurrentPosition())
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.car))
+                        .draggable(false));
+            }else{
+                posMarker.setPosition(getCurrentPosition());
+            }
         }
     }
 
@@ -342,35 +412,12 @@ public class VehicleService implements LocationListener {
 
     @Override
     public void onProviderEnabled(String s) {
-        //Acquire a reference to the system Location Manager
-        LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (locationManager != null) {
-            // Check permission
-            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
-            // Add listener
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, this);
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
-        }
+
     }
 
     @Override
     public void onProviderDisabled(String s) {
-        //Acquire a reference to the system Location Manager
-        LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if(locationManager != null)
-        {
-            // Remove listener
-            locationManager.removeUpdates(this);
-        }
+
     }
 
 

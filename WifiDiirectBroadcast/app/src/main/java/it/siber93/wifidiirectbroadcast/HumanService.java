@@ -3,7 +3,9 @@ package it.siber93.wifidiirectbroadcast;
 
 import android.net.wifi.p2p.WifiP2pDevice;
 
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -28,7 +30,7 @@ public class HumanService {
     long timestamp                  = 0;
     double bearing                  = 0;
     double speed                    = 0;
-
+    Marker posMarker                = null;
 
     /**
      * Get the current resource reserved for read/write

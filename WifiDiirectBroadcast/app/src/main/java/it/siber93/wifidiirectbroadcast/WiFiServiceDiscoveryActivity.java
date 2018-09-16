@@ -1,5 +1,6 @@
 package it.siber93.wifidiirectbroadcast;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.BroadcastReceiver;
@@ -7,6 +8,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -17,35 +19,40 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 
 
-public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
+public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements OnMapReadyCallback {
 
 
     /**
      * Software modules enablers
      */
-    public static final boolean LISTENER_MODULE                         = true;
-    public static final boolean PUBLISHER_MODULE                        = true;
+    public boolean VEHICLE_MODULE                                       = false;
+    public boolean HUMAN_MODULE                                         = false;
 
-    /**
-     * Indicates when the app is looking for other p2p devices
-     */
-    public boolean isServiceDiscoveryActive                             = false;
-    /**
-     * Indicates if the local service is published on the network
-     */
-    public boolean isServiceBroadcasting                                = false;
+
 
     public static final String TAG                                      = "wifidirectdemo";
 
@@ -65,7 +72,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
 
 
     public ArrayList<HumanService> humans_discovered                  = new ArrayList<HumanService>();   // List of all devices recently discovered that must be processed
-    public ArrayList<HumanService> humans_reported                    = new ArrayList<HumanService>();   // List of all devices that have been reported in the map
+    //public ArrayList<HumanService> humans_reported                    = new ArrayList<HumanService>();   // List of all devices that have been reported in the map
 
 
     /**
@@ -89,6 +96,11 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
     private WifiP2pDnsSdServiceRequest serviceRequest;
     WifiP2pDnsSdServiceInfo service;
 
+
+    VehicleService vServ;                                                                       // Manager of the vehicle data
+    HumanLocalService hServ;                                                                    // Manager of the local human data
+
+
     //private Handler handler = new Handler(this);
     //private WiFiChatFragment chatFragment;
     /**
@@ -100,6 +112,23 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
      * TextView of the graphic log
      */
     private TextView statusTxtView;
+
+    /**
+     * Switch for vehicle mode
+     */
+    private Switch swv;
+    /**
+     * Switch for human mode
+     */
+    private Switch swh;
+
+
+    /**
+     * View of the graphic map
+     */
+    private MapView map;
+
+    private GoogleMap gmap;
 
     /*public Handler getHandler() {
         return handler;
@@ -117,23 +146,111 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        statusTxtView = (TextView) findViewById(R.id.status_text);
+
+        // Map view initialization
+        map = (MapView) findViewById(R.id.mapView) ;
+        map.onCreate(null);
+        map.onResume();
+        map.getMapAsync(this);
+
+
+        // Human switch button initialization
+        swh = (Switch) findViewById(R.id.switchV);
+        swv.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Start/Stop discovering P2P devices", Snackbar.LENGTH_LONG)
-                        .setAction(
-                                (isServiceDiscoveryActive ? "Stop discovering": "Start discovering"),
-                                new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View view) {
-                                        // TODO: Implement or delete the button
-                                    }
-                                }).show();
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                HUMAN_MODULE = b;
+                if (b) {
+                    // Start publishing + discovery
+                    // Create service manager
+                    hServ = new HumanLocalService();
+                    // TODO start position management
+                    // Publish this device on the network sending beacon
+                    serviceBroadcastRunnable.run();
+                    // Initiates callbacks for service discovery
+                    prepareServiceDiscovery();
+                    startServiceDiscovery();
+
+                }
+                else{
+                    // Disable switch for few seconds
+                    compoundButton.setEnabled(false);
+                }
             }
         });
 
-        statusTxtView = (TextView) findViewById(R.id.status_text);
+
+        // Vehicle switch button initialization
+        swv = (Switch) findViewById(R.id.switchV);
+        swv.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                VEHICLE_MODULE = b;
+                if(b)
+                {
+                    // Check if discovery service can be enabled now
+                    // Check if wifi is enabled
+                    WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    if (!wifi.isWifiEnabled()){
+                        // Ask for enabling it
+                        AlertDialog.Builder builder = new AlertDialog.Builder(
+                                getApplicationContext());
+                        builder.setTitle("Save the Humanity");
+                        builder.setMessage("The Wifi service is off. Do you want to turn it on?");
+                        builder.setPositiveButton("Enable Wifi",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(
+                                            final DialogInterface dialogInterface,
+                                            final int i) {
+                                        startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+                                    }
+                                });
+                        builder.setNegativeButton("Exit",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        System.exit(0);
+                                    }
+                                });
+                        builder.show();
+                    }else{
+
+                        // Create vehicle manager
+                        vServ = new VehicleService(getApplicationContext(), gmap);
+
+                        // Initiates callbacks for service discovery
+                        prepareServiceDiscovery();
+                        startServiceDiscovery();
+
+                    }
+                }
+                else{
+                    // Disable switch for few seconds
+                    compoundButton.setEnabled(false);
+                    // Stop listening position
+                    vServ.stop();
+                    vServ = null;
+                }
+            }
+        });
+
+
+
+
+
+        // Check location permission
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted
+            // Should we show an explanation?
+
+            // No explanation needed; request the permission
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    0);
+        }
+
 
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
@@ -146,35 +263,6 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
         // Get an initialized channel where to communicate
         channel = manager.initialize(this, getMainLooper(), null);
 
-    }
-    @Override
-    protected void onRestart() {
-        if(LISTENER_MODULE) {
-            Fragment frag = getFragmentManager().findFragmentByTag("services");
-            if (frag != null) {
-                getFragmentManager().beginTransaction().remove(frag).commit();
-            }
-        }
-        super.onRestart();
-    }
-
-    @Override
-    protected void onStop() {
-        if (manager != null && channel != null) {
-            manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
-
-                @Override
-                public void onFailure(int reasonCode) {
-                    Log.d(TAG, "Disconnect failed. Reason :" + reasonCode);
-                }
-
-                @Override
-                public void onSuccess() {
-                }
-
-            });
-        }
-        super.onStop();
     }
 
     /**
@@ -201,13 +289,13 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                     Map<String, String> record = new HashMap<String, String>();
                     record.put(TXTRECORD_PROP_SERVICE_INSTANCE, SERVICE_INSTANCE);
                     record.put(TXTRECORD_PROP_AVAILABLE, "visible");
-                    record.put(TXTRECORD_PROP_LONG, String.valueOf(AUTOINCREMENT_NUMBER++));
-                    record.put(TXTRECORD_PROP_LAT, String.valueOf(AUTOINCREMENT_NUMBER++));
-                    record.put(TXTRECORD_PROP_ACCURACY, String.valueOf(AUTOINCREMENT_NUMBER++));
-                    record.put(TXTRECORD_PROP_TIMESTAMP, String.valueOf(AUTOINCREMENT_NUMBER++));
-                    record.put(TXTRECORD_PROP_TIMESTAMP_POS, String.valueOf(AUTOINCREMENT_NUMBER++));
-                    record.put(TXTRECORD_PROP_BEARING, String.valueOf(AUTOINCREMENT_NUMBER++));
-                    record.put(TXTRECORD_PROP_SPEED, String.valueOf(AUTOINCREMENT_NUMBER++));
+                    record.put(TXTRECORD_PROP_LONG, String.valueOf(hServ.getCurrentLongitude()));
+                    record.put(TXTRECORD_PROP_LAT, String.valueOf(hServ.getCurrentLatitude()));
+                    record.put(TXTRECORD_PROP_ACCURACY, String.valueOf(hServ.getAccuracy()));
+                    record.put(TXTRECORD_PROP_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
+                    record.put(TXTRECORD_PROP_TIMESTAMP_POS, String.valueOf(hServ.getCurrentPositionTimeStamp()));
+                    record.put(TXTRECORD_PROP_BEARING, String.valueOf(hServ.getCurrentBearing()));
+                    record.put(TXTRECORD_PROP_SPEED, String.valueOf(hServ.getCurrentspeed()));
 
                     service = WifiP2pDnsSdServiceInfo.newInstance(
                             SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
@@ -250,67 +338,66 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
          * Register listeners for DNS-SD services. These are callbacks invoked
          * by the system when a service is actually discovered.
          */
+        // Only in vehicle mode the callbacks for human discovery are enabled
+        if(VEHICLE_MODULE) {
+            manager.setDnsSdResponseListeners(channel,
+                    new WifiP2pManager.DnsSdServiceResponseListener() {
 
-        manager.setDnsSdResponseListeners(channel,
-                new WifiP2pManager.DnsSdServiceResponseListener() {
-
-                    @Override
-                    public void onDnsSdServiceAvailable(String instanceName, String registrationType, WifiP2pDevice srcDevice) {
-
-
-
-                    }
-                }, new WifiP2pManager.DnsSdTxtRecordListener() {
-
-                    /**
-                     * A new TXT record is available. Pick up the advertised
-                     * buddy name.
-                     */
-                    @Override
-                    public void onDnsSdTxtRecordAvailable(
-                            String fullDomainName, Map<String, String> record,
-                            WifiP2pDevice device) {
+                        @Override
+                        public void onDnsSdServiceAvailable(String instanceName, String registrationType, WifiP2pDevice srcDevice) {
 
 
-                        // A service has been discovered. Is this our app?
-                        if (record.containsKey(TXTRECORD_PROP_SERVICE_INSTANCE) &&
-                                record.get(TXTRECORD_PROP_SERVICE_INSTANCE).equalsIgnoreCase(SERVICE_INSTANCE)) {
+                        }
+                    }, new WifiP2pManager.DnsSdTxtRecordListener() {
 
-                            // update the UI and add the item the discovered
-                            // device.
+                        /**
+                         * A new TXT record is available. Pick up the advertised
+                         * buddy name.
+                         */
+                        @Override
+                        public void onDnsSdTxtRecordAvailable(
+                                String fullDomainName, Map<String, String> record,
+                                WifiP2pDevice device) {
+
+
+                            // A service has been discovered. Is this our app?
+                            if (record.containsKey(TXTRECORD_PROP_SERVICE_INSTANCE) &&
+                                    record.get(TXTRECORD_PROP_SERVICE_INSTANCE).equalsIgnoreCase(SERVICE_INSTANCE)) {
+
+                                // update the UI and add the item the discovered
+                                // device.
                            /*WiFiDirectServicesList fragment = (WiFiDirectServicesList) getFragmentManager()
                                     .findFragmentByTag("services");
                             if (fragment != null) {
                                 WiFiDirectServicesList.WiFiDevicesAdapter adapter = ((WiFiDirectServicesList.WiFiDevicesAdapter) fragment
                                         .getListAdapter());*/
-                            boolean found = false;
+                                boolean found = false;
 
-                            // Search if this device with this service already exists in the list of the discovered
-                            for(int i = 0; i < humans_discovered.size(); i++)
-                            {
-                                // Block the resources in order to read it values
-                                humans_discovered.get(i).Lock();
-                                // Compare MAC address
-                                if(humans_discovered.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress) )
-                                {
-                                    // Update values for this entity
-                                    humans_discovered.get(i).device = device;
-                                    humans_discovered.get(i).instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
-                                    humans_discovered.get(i).accuracy = Double.parseDouble(record.get(TXTRECORD_PROP_ACCURACY));
-                                    humans_discovered.get(i).bearing = Double.parseDouble(record.get(TXTRECORD_PROP_BEARING));
-                                    humans_discovered.get(i).longitude = Double.parseDouble(record.get(TXTRECORD_PROP_LONG));
-                                    humans_discovered.get(i).latitude = Double.parseDouble(record.get(TXTRECORD_PROP_LAT));
-                                    humans_discovered.get(i).speed = Double.parseDouble(record.get(TXTRECORD_PROP_SPEED));
-                                    humans_discovered.get(i).timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
-                                    humans_discovered.get(i).timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
-                                    found = true;
+                                // Search if this device with this service already exists in the list of the discovered
+                                for (int i = 0; i < humans_discovered.size(); i++) {
+                                    // Block the resources in order to read it values
+                                    humans_discovered.get(i).Lock();
+                                    // Compare MAC address
+                                    if (humans_discovered.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress)) {
+                                        // Update values for this entity
+                                        humans_discovered.get(i).device = device;
+                                        humans_discovered.get(i).instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
+                                        humans_discovered.get(i).accuracy = Double.parseDouble(record.get(TXTRECORD_PROP_ACCURACY));
+                                        humans_discovered.get(i).bearing = Double.parseDouble(record.get(TXTRECORD_PROP_BEARING));
+                                        humans_discovered.get(i).longitude = Double.parseDouble(record.get(TXTRECORD_PROP_LONG));
+                                        humans_discovered.get(i).latitude = Double.parseDouble(record.get(TXTRECORD_PROP_LAT));
+                                        humans_discovered.get(i).speed = Double.parseDouble(record.get(TXTRECORD_PROP_SPEED));
+                                        humans_discovered.get(i).timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
+                                        humans_discovered.get(i).timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
+                                        found = true;
+                                        humans_discovered.get(i).posMarker.setPosition(humans_discovered.get(i).getHumanPositionIn(1));
+                                        humans_discovered.get(i).Unlock();
+                                        break;
+                                    }
                                     humans_discovered.get(i).Unlock();
-                                    break;
                                 }
-                                humans_discovered.get(i).Unlock();
-                            }
-                            // Search if this device with this service already exists in the list of the reported
-                            for(int i = 0; i < humans_reported.size(); i++)
+                                // Search if this device with this service already exists in the list of the reported
+                            /*for(int i = 0; i < humans_reported.size(); i++)
                             {
                                 // Block the resources in order to read it values
                                 humans_reported.get(i).Lock();
@@ -323,30 +410,35 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                                     break;
                                 }
                                 humans_reported.get(i).Unlock();
-                            }
-                            if(!found) {
-                                // If not found, create it and add it to the discovered list
-                                HumanService service = new HumanService();
+                            }*/
+                                if (!found) {
+                                    // If not found, create it and add it to the discovered list
+                                    HumanService service = new HumanService();
 
-                                service.device = device;
-                                service.instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
-                                service.accuracy = Double.parseDouble(record.get(TXTRECORD_PROP_ACCURACY));
-                                service.bearing = Double.parseDouble(record.get(TXTRECORD_PROP_BEARING));
-                                service.longitude = Double.parseDouble(record.get(TXTRECORD_PROP_LONG));
-                                service.latitude = Double.parseDouble(record.get(TXTRECORD_PROP_LAT));
-                                service.speed = Double.parseDouble(record.get(TXTRECORD_PROP_SPEED));
-                                service.timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
-                                service.timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
+                                    service.device = device;
+                                    service.instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
+                                    service.accuracy = Double.parseDouble(record.get(TXTRECORD_PROP_ACCURACY));
+                                    service.bearing = Double.parseDouble(record.get(TXTRECORD_PROP_BEARING));
+                                    service.longitude = Double.parseDouble(record.get(TXTRECORD_PROP_LONG));
+                                    service.latitude = Double.parseDouble(record.get(TXTRECORD_PROP_LAT));
+                                    service.speed = Double.parseDouble(record.get(TXTRECORD_PROP_SPEED));
+                                    service.timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
+                                    service.timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
 
-                                humans_discovered.add(service);
-                                //adapter.add(service);
-                            }
+                                    service.posMarker = gmap.addMarker(new MarkerOptions()
+                                            .position(service.getHumanPositionIn(3))
+                                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.man))
+                                            .draggable(false));
+                                    appendStatus("[D] Human found");
+                                    humans_discovered.add(service);
+                                    //adapter.add(service);
+                                }
                                 //adapter.notifyDataSetChanged();
-                            //}
+                                //}
+                            }
                         }
-                    }
-                });
-
+                    });
+        }
         // After attaching listeners, create a service request and initiate
         // discovery.
         serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
@@ -379,9 +471,26 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess() {
                         Log.d("Discovery","[D] Service request removing completed");
-                        if(!isServiceDiscoveryActive) {
+                        if(!VEHICLE_MODULE && !HUMAN_MODULE) {
                             // Disable service discovery
-                            appendStatus("[D] Service discovery stopped");
+                            appendStatus("[D] Vehicle mode stopped");
+                            if(swv != null)
+                            {
+                                // Enable switch button again
+                                swv.setEnabled(true);
+                            }
+
+                            return;
+                        }
+                        if(!HUMAN_MODULE) {
+                            // Disable service discovery
+                            appendStatus("[D] Human mode stopped");
+                            if(swh != null)
+                            {
+                                // Enable switch button again
+                                swh.setEnabled(true);
+                            }
+
                             return;
                         }
                         // Creating new service request to broadcast
@@ -498,83 +607,36 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
     }*/
 
     @Override
-    public void onResume() {
+    protected void onResume() {
         super.onResume();
-        // Check if discovery service has been enabled
-        if(isServiceDiscoveryActive) {
-            /*receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
-            registerReceiver(receiver, intentFilter);*/
-        }else{
-            // Check if discovery service can be enabled now
-            // Check if wifi is enabled
-            WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-            if (!wifi.isWifiEnabled()){
-                // Ask for enabling it
-                AlertDialog.Builder builder = new AlertDialog.Builder(
-                        this);
-                builder.setTitle("Save the Humanity");
-                builder.setMessage("The Wifi service is off. Do you want to turn it on?");
-                builder.setPositiveButton("Enable Wifi",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(
-                                    final DialogInterface dialogInterface,
-                                    final int i) {
-                                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
-                            }
-                        });
-                builder.setNegativeButton("Exit",
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                System.exit(0);
-                            }
-                        });
-                builder.show();
-            }else{
-                // Start publishing + discovery
-                if(PUBLISHER_MODULE) {
-                    // Publish this device on the network sending beacon
-                    serviceBroadcastingHandler.postDelayed(serviceBroadcastRunnable,200);
-                }
-                if(LISTENER_MODULE) {
-                    // Initiates callbacks for service discovery
-                    prepareServiceDiscovery();
-                    // Check if the discovery is already running
-                    if (!isServiceDiscoveryActive) {
-                        // Check for other P2P devices on the network
-                        /*prepareServiceDiscovery();
-                        startServiceDiscovery();
-                        // Initializing the fragmentlist with the device founded on the network
-                        servicesList = new WiFiDirectServicesList();
-                        // Show the fragment
-                        getFragmentManager().beginTransaction()
-                                .add(R.id.devices_root, servicesList, "services").commit();*/
-
-                    }else{
-                        // Clear all the devices discovered in the adapterlist
-                        /*WiFiDirectServicesList fragment = (WiFiDirectServicesList) getFragmentManager()
-                                .findFragmentByTag("services");
-                        WiFiDirectServicesList.WiFiDevicesAdapter adapter = ((WiFiDirectServicesList.WiFiDevicesAdapter) fragment
-                                .getListAdapter());
-                        adapter.clear();
-                        adapter.notifyDataSetChanged();*/
-                    }
-                    // Toggle boolean discovery variable (NOT == disable discovery)
-                    isServiceDiscoveryActive = !isServiceDiscoveryActive;
-                }
-            }
-        }
+        map.onResume();
     }
 
     @Override
-    public void onPause() {
+    protected void onStart() {
+        super.onStart();
+        map.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        map.onStop();
+    }
+    @Override
+    protected void onPause() {
+        map.onPause();
         super.onPause();
-        if(receiver != null) {
-            unregisterReceiver(receiver);
-            // Block discovery thread
-            isServiceDiscoveryActive = false;
-        }
+    }
+    @Override
+    protected void onDestroy() {
+        map.onDestroy();
+        super.onDestroy();
+    }
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        map.onLowMemory();
     }
 
 
@@ -621,4 +683,14 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        gmap = googleMap;
+        gmap.setMinZoomPreference(12);
+        gmap.getUiSettings().setZoomGesturesEnabled(true);
+        if(swv != null)
+        {
+            swv.setEnabled(true);
+        }
+    }
 }
