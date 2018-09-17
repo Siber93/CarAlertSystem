@@ -22,7 +22,7 @@ public class HumanLocalService {
     }
 
     double getCurrentBearing(){
-        return 0;
+        return 180;
     }
 
     double getCurrentspeed(){

@@ -77,10 +77,10 @@ public class HumanService {
         double d_m = s_ms*delta_s;;
 
         // Calculate new coordinates
-        double lat_now = Math.asin( Math.sin(lat_t)*Math.cos(d_m/R) +
-                Math.cos(lat_t)*Math.sin(d_m/R)*Math.cos(b) );
-        double long_now = long_t + Math.atan2(Math.sin(b)*Math.sin(d_m/R)*Math.cos(lat_t),
-                Math.cos(d_m/R)-Math.sin(lat_t)*Math.sin(lat_now));
+        double lat_now = Math.toDegrees(Math.asin( Math.sin(Math.toRadians(lat_t))*Math.cos(Math.toRadians(d_m/R)) +
+                Math.cos(Math.toRadians(lat_t))*Math.sin(Math.toRadians(d_m/R))*Math.cos(Math.toRadians(b))));
+        double long_now = long_t + Math.toDegrees(Math.atan2(Math.sin(Math.toRadians(b))*Math.sin(Math.toRadians(d_m/R))*Math.cos(Math.toRadians(lat_t)),
+                Math.cos(Math.toRadians(d_m/R))-Math.sin(Math.toRadians(lat_t))*Math.sin(Math.toRadians(lat_now))));
 
         return new LatLng(lat_now, long_now);
     }

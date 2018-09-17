@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Human"
-            android:enabled="false"/>
+            android:enabled="true"/>
 
         <Switch
             android:id="@+id/switchV"

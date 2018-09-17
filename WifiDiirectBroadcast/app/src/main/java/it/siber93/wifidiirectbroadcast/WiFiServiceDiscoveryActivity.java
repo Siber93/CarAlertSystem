@@ -263,6 +263,20 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
         // Get an initialized channel where to communicate
         channel = manager.initialize(this, getMainLooper(), null);
 
+
+
+        HumanLocalService hls = new HumanLocalService();
+        HumanService hs = new HumanService();
+        hs.accuracy= hls.getAccuracy();
+        hs.latitude = hls.getCurrentLatitude();
+        hs.longitude = hls.getCurrentLongitude();
+        hs.speed = hls.getCurrentspeed();
+        hs.bearing = hls.getCurrentBearing();
+        hs.timestampPos = hls.getCurrentPositionTimeStamp();
+        hs.timestamp = System.currentTimeMillis();
+        LatLng P = hs.getHumanPositionIn(30);
+
+
     }
 
     /**
