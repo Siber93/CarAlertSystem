@@ -274,7 +274,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
         hs.bearing = hls.getCurrentBearing();
         hs.timestampPos = hls.getCurrentPositionTimeStamp();
         hs.timestamp = System.currentTimeMillis();
-        LatLng P = hs.getHumanPositionIn(30);
+        LatLng P = hs.getHumanPositionIn(10);
 
 
     }
