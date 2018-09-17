@@ -115,7 +115,8 @@ public class VehicleService implements LocationListener {
      * @return LatLng Object
      */
     public LatLng getCurrentPosition() {
-        return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        //return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        return new LatLng(44.742139, 10.578990);
     }
 
 
@@ -254,7 +255,7 @@ public class VehicleService implements LocationListener {
         double py = (new_p[1]- v[1])/(u[1] - v[1]);
 
         // Distance must be in meters and not in latlng difference, so convert it
-        if(px == py)
+        if(Math.round(px*100000000) == Math.round(py*100000000))
         {
             // Point on the segment
             return getLocationsDistance(new LatLng(px,py),p);
