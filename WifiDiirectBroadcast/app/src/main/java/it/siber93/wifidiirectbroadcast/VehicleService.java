@@ -298,7 +298,8 @@ public class VehicleService implements LocationListener {
         }
         if(end ==  start)
         {
-            // error, no <60m away segments
+            // All segments are inside 60 meters range
+            end = route.size()-1;
         }
 
         // Intersection check
