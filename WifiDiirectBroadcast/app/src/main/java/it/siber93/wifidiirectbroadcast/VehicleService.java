@@ -175,7 +175,8 @@ public class VehicleService implements LocationListener {
                 return dist / time_s;
             }
         }
-        return 0;
+        //return 0; TODO ripristinare
+        return 15;
     }
 
 
@@ -229,7 +230,7 @@ public class VehicleService implements LocationListener {
     /**
      * Given a segment and a point this function return the distance point-segment if the point is
      * on the segment, otherwise the distance to the nearest edge of the segment.
-     * REFERENCE https://stackoverflow.com/questions/49061521/projection-of-a-point-to-a-line-segment-python-shapely
+     * REFERENCE https://stackoverflow.com/questions/1299567/how-to-calculate-distance-from-a-point-to-a-line-segment-on-a-sphere
      * @param s1 First segment point
      * @param s2 Second segment point
      * @param p Point tha must be projected
@@ -237,28 +238,83 @@ public class VehicleService implements LocationListener {
      */
     public double getPointSegmentProjectionDistance(LatLng s1, LatLng s2, LatLng p)
     {
-        double u[] = {s1.latitude,s1.longitude};
-        double v[] = {s2.latitude,s2.longitude};
-        double x[] = {p.latitude,p.longitude};
+        // Earth radius in km
+        double R = 6378.137;
 
-        Vector uv = new Vector(new double[]{v[0] - u[0], v[1] - u[1]});
-        Vector xu = new Vector(new double[]{u[0] - x[0], u[1] - x[1]});
+        // minimum onSegment Error
+        double Precision = 1.0;
 
-        double d = uv.dot(xu)/uv.magnitude();
 
-        double new_p[] = {
-                u[0] + d * uv.cartesian(0)/uv.magnitude(),
-                u[1] + d * uv.cartesian(1)/uv.magnitude()
-        } ;
+        // Convert coordinates to cartesian
+        double a[] = {
+                R * Math.cos(Math.toRadians(s1.latitude)) * Math.cos(Math.toRadians(s1.longitude)),
+                R * Math.cos(Math.toRadians(s1.latitude)) * Math.sin(Math.toRadians(s1.longitude)),
+                R * Math.sin(Math.toRadians(s1.latitude))
+        };
+        double b[] = {
+                R * Math.cos(Math.toRadians(s2.latitude)) * Math.cos(Math.toRadians(s2.longitude)),
+                R * Math.cos(Math.toRadians(s2.latitude)) * Math.sin(Math.toRadians(s2.longitude)),
+                R * Math.sin(Math.toRadians(s2.latitude))
+        };
+        double c[] = {
+                R * Math.cos(Math.toRadians(p.latitude)) * Math.cos(Math.toRadians(p.longitude)),
+                R * Math.cos(Math.toRadians(p.latitude)) * Math.sin(Math.toRadians(p.longitude)),
+                R * Math.sin(Math.toRadians(p.latitude))
+        };
 
-        double px = (new_p[0]- v[0])/(u[0] - v[0]);
-        double py = (new_p[1]- v[1])/(u[1] - v[1]);
+        // Create vectors
+        Vector A = new Vector(a);
+        Vector B = new Vector(b);
+        Vector C = new Vector(c);
 
-        // Distance must be in meters and not in latlng difference, so convert it
-        if(Math.round(px*100000000) == Math.round(py*100000000))
+        // Calculate T, the point on the line AB that is nearest to C, using the following 3 vector products
+        Vector G = new Vector(
+                new double[] {
+                        A.cartesian(1)*B.cartesian(2)-A.cartesian(2)*B.cartesian(1),
+                        A.cartesian(2)*B.cartesian(0)-A.cartesian(0)*B.cartesian(2),
+                        A.cartesian(0)*B.cartesian(1)-A.cartesian(1)*B.cartesian(0)
+                });
+
+        Vector F = new Vector(
+                new double[] {
+                        C.cartesian(1)*G.cartesian(2)-C.cartesian(2)*G.cartesian(1),
+                        C.cartesian(2)*G.cartesian(0)-C.cartesian(0)*G.cartesian(2),
+                        C.cartesian(0)*G.cartesian(1)-C.cartesian(1)*G.cartesian(0)
+                });
+
+        Vector T = new Vector(
+                new double[] {
+                        G.cartesian(1)*F.cartesian(2)-G.cartesian(2)*F.cartesian(1),
+                        G.cartesian(2)*F.cartesian(0)-G.cartesian(0)*F.cartesian(2),
+                        G.cartesian(0)*F.cartesian(1)-G.cartesian(1)*F.cartesian(0)
+                });
+
+
+        // Normalize T
+        /*Vector T_N = new Vector(
+                new double[] {
+                        T.cartesian(0)/T.magnitude(),
+                        T.cartesian(1)/T.magnitude(),
+                        T.cartesian(0)/T.magnitude()
+                });*/
+        Vector T_N = T.normalize();
+
+        // Multiply by R
+        Vector T_S = T_N.scale(R);
+
+        // Convert T back to longitude\latitude.
+        LatLng new_p = new LatLng(
+                Math.toDegrees(Math.asin(T_S.cartesian(2) / R)),
+                Math.toDegrees(Math.atan2(T_S.cartesian(1),T_S.cartesian(0)))
+        );
+
+
+
+        // check if the new point is on the segment A-B
+        if(Math.abs(getLocationsDistance(s1,s2)-getLocationsDistance(s1,new_p)-getLocationsDistance(s2,new_p))<Precision)
         {
             // Point on the segment
-            return getLocationsDistance(new LatLng(px,py),p);
+            return getLocationsDistance(new_p,p);
         }
         else {
             // Point out of the segment
@@ -349,6 +405,49 @@ public class VehicleService implements LocationListener {
 
         return (val > 0) ? 1 : 2; // clock or counterclock wise
     }
+
+    /**
+     * http://www.edwilliams.org/intersect.htm
+     * @param p1
+     * @param q1
+     * @param p2
+     * @param q2
+     * @return
+     */
+    private boolean doIntersect2(LatLng p1, LatLng q1, LatLng p2, LatLng q2)
+    {
+        // TODO provare nel caso
+        Vector e1xe2 =new Vector( new double[]
+            {
+                    Math.sin(Math.toRadians(p1.latitude - q1.latitude)) * Math.sin(Math.toRadians((p1.longitude + q1.longitude) / 2))
+                            * Math.cos(Math.toRadians((p1.longitude - q1.longitude) / 2))  - Math.sin(Math.toRadians(p1.latitude + q1.latitude))
+                            * Math.cos(Math.toRadians((p1.longitude + q1.longitude) / 2)) * Math.sin(Math.toRadians((p1.longitude - q1.longitude) / 2)),
+                    Math.sin(Math.toRadians(p1.latitude - q1.latitude)) * Math.cos(Math.toRadians((p1.longitude + q1.longitude) / 2)) * Math.cos(Math.toRadians((p1.longitude - q1.longitude) / 2)) +
+                            Math.sin(Math.toRadians(p1.latitude + q1.latitude)) * Math.sin(Math.toRadians((p1.longitude + q1.longitude) / 2)) * Math.sin(Math.toRadians((p1.longitude - q1.longitude) / 2)),
+                    Math.cos(Math.toRadians(p1.latitude)) * Math.cos(Math.toRadians(q1.latitude)) * Math.sin(Math.toRadians(p1.longitude - q1.longitude))
+            });
+
+
+        Vector e3xe4 = new Vector(new double[]
+                {
+                        Math.sin(Math.toRadians(p2.latitude - q2.latitude)) * Math.sin(Math.toRadians((p2.longitude + q2.longitude) / 2))
+                                * Math.cos(Math.toRadians((p2.longitude - q2.longitude) / 2))  - Math.sin(Math.toRadians(p2.latitude + q2.latitude))
+                                * Math.cos(Math.toRadians((p2.longitude + q2.longitude) / 2)) * Math.sin(Math.toRadians((p2.longitude - q2.longitude) / 2)),
+                        Math.sin(Math.toRadians(p2.latitude - q2.latitude)) * Math.cos(Math.toRadians((p2.longitude + q2.longitude) / 2)) * Math.cos(Math.toRadians((p2.longitude - q2.longitude) / 2)) +
+                                Math.sin(Math.toRadians(p2.latitude + q2.latitude)) * Math.sin(Math.toRadians((p2.longitude + q2.longitude) / 2)) * Math.sin(Math.toRadians((p2.longitude - q2.longitude) / 2)),
+                        Math.cos(Math.toRadians(p2.latitude)) * Math.cos(Math.toRadians(q2.latitude)) * Math.sin(Math.toRadians(p2.longitude - q2.longitude))
+                });
+        Vector ea = e1xe2.normalize();
+        Vector eb = e3xe4.normalize();
+
+
+        Vector eaxeb = new Vector(new double[]{ea.cartesian(1)*eb.cartesian(2) -eb.cartesian(1) *ea.cartesian(2), ea.cartesian(2) *eb.cartesian(0) -eb.cartesian(2) *ea.cartesian(0), ea.cartesian(0) *eb.cartesian(1) -ea.cartesian(1) *eb.cartesian(0)});
+
+        double lat = Math.toDegrees(Math.atan2(eaxeb.cartesian(2), Math.sqrt(eaxeb.cartesian(0)*eaxeb.cartesian(0) + eaxeb.cartesian(1)*eaxeb.cartesian(1))));
+        double lon = Math.toDegrees(Math.atan2(eaxeb.cartesian(1), eaxeb.cartesian(0)));
+        return true;
+    }
+
 
     // The main function that returns true if line segment 'p1q1'
     // and 'p2q2' intersect.

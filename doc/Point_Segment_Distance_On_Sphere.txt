@@ -1,0 +1,37 @@
+
+A = 44.74186,10.57980
+B = 44.74235,10.57839
+C = 44.742139, 10.578990
+
+
+
+A-B segment, C point
+
+1) Convert the coordinates first to Cartesian coordinates (with the origin at the center of earth)
+	x = R * cos(lat) * cos(lon)
+
+	y = R * cos(lat) * sin(lon)
+
+	z = R *sin(lat)
+
+2) Calculate T, the point on the line AB that is nearest to C, using the following 3 vector products
+	G = A x B
+
+	F = C x G
+
+	T = G x F
+
+3) Normalize T and multiply by the radius of earth.
+	x = ax/|a|
+	y = ay/|a|
+	z = az/|a|
+	
+	xr = x*R
+	yr = y*R
+	zr = z*R
+	
+4) Convert T back to longitude\latitude.
+	lat = asin(zR / R)
+	lon = atan2(yR, xR)
+	
+5) Calculate the distance between T and C.

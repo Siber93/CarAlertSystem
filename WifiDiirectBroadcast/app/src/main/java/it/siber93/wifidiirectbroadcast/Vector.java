@@ -112,4 +112,14 @@ public class Vector {
             throw new ArithmeticException("zero-vector has no direction");
         return this.times(1.0 / this.magnitude());
     }
+
+    // normalize the vector
+    public Vector normalize()
+    {
+        double ret[] =  new double[data.length];
+        for (int i = 0; i < data.length; i++) {
+            ret[i] = data[i] / magnitude();
+        }
+        return new Vector(ret);
+    }
 }
