@@ -115,8 +115,13 @@ public class VehicleService implements LocationListener {
      * @return LatLng Object
      */
     public LatLng getCurrentPosition() {
+<<<<<<< HEAD
         //return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude()); TODO decommentare
         return new LatLng(44.742139, 10.578990);
+=======
+        return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        // return new LatLng(44.742139, 10.578990); DEBUG
+>>>>>>> cc5227a8eb51e9fc54dcf71da43c9154190b715f
     }
 
 
@@ -416,7 +421,7 @@ public class VehicleService implements LocationListener {
      */
     private boolean doIntersect2(LatLng p1, LatLng q1, LatLng p2, LatLng q2)
     {
-        // TODO provare nel caso
+        // TODO provare nel caso, non necessario nella versione demo
         Vector e1xe2 =new Vector( new double[]
             {
                     Math.sin(Math.toRadians(p1.latitude - q1.latitude)) * Math.sin(Math.toRadians((p1.longitude + q1.longitude) / 2))
@@ -506,7 +511,6 @@ public class VehicleService implements LocationListener {
         // Check if the new location is better then older one
         if(isBetterLocation(location,currentLocation))
         {
-            // TODO Man mano che vado avanti con la posizione cancello i segmenti di polyline vecchi
             lastLocationSaved = currentLocation;
             currentLocation = location;
             // Change Position in the map
