@@ -72,7 +72,6 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
 
 
     public ArrayList<HumanService> humans_discovered                  = new ArrayList<HumanService>();   // List of all devices recently discovered that must be processed
-    //public ArrayList<HumanService> humans_reported                    = new ArrayList<HumanService>();   // List of all devices that have been reported in the map
 
 
     /**
@@ -80,15 +79,11 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
      */
     public int AUTOINCREMENT_NUMBER                                     = 0;
 
-    //public static final int MESSAGE_READ                                = 0x400 + 1;
-    //public static final int MY_HANDLE                                   = 0x400 + 2;
     public static final int PUBLISH_TIME                                = 10000;
     public static final int DISCOVERY_TIME                              = 10000;
 
     private WifiP2pManager manager;
 
-
-    //static final int SERVER_PORT                                        = 4545;
 
     private final IntentFilter intentFilter                             = new IntentFilter();
     private WifiP2pManager.Channel channel;
@@ -100,13 +95,6 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
     VehicleService vServ;                                                                       // Manager of the vehicle data
     HumanLocalService hServ;                                                                    // Manager of the local human data
 
-
-    //private Handler handler = new Handler(this);
-    //private WiFiChatFragment chatFragment;
-    /**
-     * List of all the discovered device
-     */
-    //private WiFiDirectServicesList servicesList;
 
     /**
      * TextView of the graphic log
@@ -130,13 +118,6 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
 
     private GoogleMap gmap;
 
-    /*public Handler getHandler() {
-        return handler;
-    }*/
-
-    /*public void setHandler(Handler handler) {
-        this.handler = handler;
-    }*/
 
 
     @Override
@@ -165,7 +146,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                     // Start publishing + discovery
                     // Create service manager
                     hServ = new HumanLocalService();
-                    // TODO start position management
+                    // TODO start position management, it could be integrated in the constructor
                     // Publish this device on the network sending beacon
                     serviceBroadcastRunnable.run();
                     // Initiates callbacks for service discovery
@@ -220,7 +201,8 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                         // Create vehicle manager
                         vServ = new VehicleService(getApplicationContext(), gmap);
 
-                        HumanLocalService hls = new HumanLocalService();
+                        // DEBUG
+                        /*HumanLocalService hls = new HumanLocalService();
                         HumanService hs = new HumanService();
                         hs.accuracy= hls.getAccuracy();
                         hs.latitude = hls.getCurrentLatitude();
@@ -232,7 +214,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                         if(vServ.willHumanIntersectVehicle(hs))
                         {
                             int p = 0;
-                        }
+                        }*/
 
                         // Initiates callbacks for service discovery
                         prepareServiceDiscovery();
@@ -379,13 +361,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                             if (record.containsKey(TXTRECORD_PROP_SERVICE_INSTANCE) &&
                                     record.get(TXTRECORD_PROP_SERVICE_INSTANCE).equalsIgnoreCase(SERVICE_INSTANCE)) {
 
-                                // update the UI and add the item the discovered
-                                // device.
-                           /*WiFiDirectServicesList fragment = (WiFiDirectServicesList) getFragmentManager()
-                                    .findFragmentByTag("services");
-                            if (fragment != null) {
-                                WiFiDirectServicesList.WiFiDevicesAdapter adapter = ((WiFiDirectServicesList.WiFiDevicesAdapter) fragment
-                                        .getListAdapter());*/
+                                // Flag that indicates when the service has already been added in the local list
                                 boolean found = false;
 
                                 // Search if this device with this service already exists in the list of the discovered
@@ -405,27 +381,14 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                         humans_discovered.get(i).timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
                                         humans_discovered.get(i).timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
                                         found = true;
+                                        // Force redrawing on the map
                                         humans_discovered.get(i).posMarker.setPosition(humans_discovered.get(i).getHumanPositionIn(1));
                                         humans_discovered.get(i).Unlock();
                                         break;
                                     }
                                     humans_discovered.get(i).Unlock();
                                 }
-                                // Search if this device with this service already exists in the list of the reported
-                            /*for(int i = 0; i < humans_reported.size(); i++)
-                            {
-                                // Block the resources in order to read it values
-                                humans_reported.get(i).Lock();
-                                // Compare MAC address
-                                if(humans_reported.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress) )
-                                {
-                                    // Delete it and the report it again
-                                    humans_reported.get(i).obsolate  = true;
-                                    humans_reported.get(i).Unlock();
-                                    break;
-                                }
-                                humans_reported.get(i).Unlock();
-                            }*/
+
                                 if (!found) {
                                     // If not found, create it and add it to the discovered list
                                     HumanService service = new HumanService();
@@ -439,13 +402,16 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                     service.speed = Double.parseDouble(record.get(TXTRECORD_PROP_SPEED));
                                     service.timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
                                     service.timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
-
-                                    service.posMarker = gmap.addMarker(new MarkerOptions()
-                                            .position(service.getHumanPositionIn(3))
-                                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.man))
-                                            .draggable(false));
-                                    appendStatus("[D] Human found");
-                                    humans_discovered.add(service);
+                                    // Check if the human will crash with the vehicle
+                                    if(vServ.willHumanIntersectVehicle(service)) {
+                                        // If yes draw it on the map
+                                        service.posMarker = gmap.addMarker(new MarkerOptions()
+                                                .position(service.getHumanPositionIn(3))
+                                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.man))
+                                                .draggable(false));
+                                        appendStatus("[D] Human found");
+                                        humans_discovered.add(service);
+                                    }
                                     //adapter.add(service);
                                 }
                                 //adapter.notifyDataSetChanged();
@@ -553,64 +519,10 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
     private Runnable cleaningThreadRunnable = new Runnable() {
         @Override
         public void run() {
-
+            // TODO implement
         }
     };
 
-
-
-
-
-    /*@Override
-    public void connectP2p(HumanService service) {
-        WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = service.device.deviceAddress;
-        config.wps.setup = WpsInfo.PBC;
-        if (serviceRequest != null)
-            manager.removeServiceRequest(channel, serviceRequest,
-                    new WifiP2pManager.ActionListener() {
-
-                        @Override
-                        public void onSuccess() {
-                        }
-
-                        @Override
-                        public void onFailure(int arg0) {
-                        }
-                    });
-
-        manager.connect(channel, config, new WifiP2pManager.ActionListener() {
-
-            @Override
-            public void onSuccess() {
-                appendStatus("Connecting to service");
-            }
-
-            @Override
-            public void onFailure(int errorCode) {
-                appendStatus("Failed connecting to service");
-            }
-        });
-    }*/
-
-    /*@Override
-    public boolean handleMessage(Message msg) {
-        switch (msg.what) {
-            case MESSAGE_READ:
-                byte[] readBuf = (byte[]) msg.obj;
-                // construct a string from the valid bytes in the buffer
-                String readMessage = new String(readBuf, 0, msg.arg1);
-                Log.d(TAG, readMessage);
-                (chatFragment).pushMessage("Buddy: " + readMessage);
-                break;
-
-            case MY_HANDLE:
-                Object obj = msg.obj;
-                (chatFragment).setChatManager((ChatManager) obj);
-
-        }
-        return true;
-    }*/
 
     @Override
     protected void onResume() {
@@ -646,39 +558,6 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
     }
 
 
-    /*
-     * The group owner accepts connections using a server socket and then spawns a
-     * client socket for every client. This is handled by {@code
-     * GroupOwnerSocketHandler}
-     */
-    /*@Override
-    public void onConnectionInfoAvailable(WifiP2pInfo p2pInfo) {
-        Thread handler = null;
-
-        if (p2pInfo.isGroupOwner) {
-            Log.d(TAG, "Connected as group owner");
-            try {
-                handler = new GroupOwnerSocketHandler(
-                        ((WiFiChatFragment.MessageTarget) this).getHandler());
-                handler.start();
-            } catch (IOException e) {
-                Log.d(TAG,
-                        "Failed to create a server thread - " + e.getMessage());
-                return;
-            }
-        } else {
-            Log.d(TAG, "Connected as peer");
-            handler = new ClientSocketHandler(
-                    ((WiFiChatFragment.MessageTarget) this).getHandler(),
-                    p2pInfo.groupOwnerAddress);
-            handler.start();
-        }
-        chatFragment = new WiFiChatFragment();
-        getFragmentManager().beginTransaction()
-                .replace(R.id.container_root, chatFragment).commit();
-        statusTxtView.setVisibility(View.GONE);
-    }*/
-
     /**
      * Append a line of text to the head of the displayed log in the main activity
      * @param status Line to append
@@ -696,6 +575,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
         gmap.getUiSettings().setZoomGesturesEnabled(true);
         if(swv != null)
         {
+            // unlock the switch button if the map has been loaded
             swv.setEnabled(true);
         }
     }
