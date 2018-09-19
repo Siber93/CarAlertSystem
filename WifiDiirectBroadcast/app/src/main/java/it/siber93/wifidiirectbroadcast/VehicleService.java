@@ -115,7 +115,7 @@ public class VehicleService implements LocationListener {
      * @return LatLng Object
      */
     public LatLng getCurrentPosition() {
-        //return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
+        //return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude()); TODO decommentare
         return new LatLng(44.742139, 10.578990);
     }
 
