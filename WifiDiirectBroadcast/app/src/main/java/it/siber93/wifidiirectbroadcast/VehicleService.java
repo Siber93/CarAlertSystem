@@ -115,15 +115,9 @@ public class VehicleService implements LocationListener {
      * @return LatLng Object
      */
     public LatLng getCurrentPosition() {
-<<<<<<< HEAD
-        //return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude()); TODO decommentare
-        return new LatLng(44.742139, 10.578990);
-=======
-        return new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
-        // return new LatLng(44.742139, 10.578990); DEBUG
->>>>>>> cc5227a8eb51e9fc54dcf71da43c9154190b715f
+        //return new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+         return new LatLng(44.742139, 10.578990); //DEBUG
     }
-
 
     /**
      * Get last saved position of the vehicle
@@ -167,7 +161,7 @@ public class VehicleService implements LocationListener {
      */
     public double getCurrentSpeed() {
         // TODO: Verificare
-        if(currentLocation!= null)
+      /*  if(currentLocation!= null)
         {
             if(currentLocation.hasSpeed())
             {
@@ -180,6 +174,7 @@ public class VehicleService implements LocationListener {
                 return dist / time_s;
             }
         }
+        */
         //return 0; TODO ripristinare
         return 15;
     }

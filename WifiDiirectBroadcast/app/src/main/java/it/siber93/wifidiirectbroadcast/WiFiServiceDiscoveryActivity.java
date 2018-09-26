@@ -145,7 +145,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                 if (b) {
                     // Start publishing + discovery
                     // Create service manager
-                    hServ = new HumanLocalService();
+                    hServ = new HumanLocalService(getApplicationContext());
                     // TODO start position management, it could be integrated in the constructor
                     // Publish this device on the network sending beacon
                     serviceBroadcastRunnable.run();
