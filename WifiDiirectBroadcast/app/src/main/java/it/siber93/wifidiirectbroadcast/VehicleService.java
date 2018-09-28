@@ -24,7 +24,7 @@ import java.util.List;
 public class VehicleService implements LocationListener {
 
     //region CONSTAMTS
-    private static final int WIFI_MAX_RANGE = 60;                                                      // Max wifi covering range
+    private static final int WIFI_MAX_RANGE = 100;                                                      // Max wifi covering range
     private static final int LOCATION_OBSOLETE_TIME = 1000 * 5;                                        // Time after that a location must be considered obsolete
     public static final List<LatLng> route = Arrays.asList(
             new LatLng(44.74313,10.58337),
@@ -116,7 +116,7 @@ public class VehicleService implements LocationListener {
      */
     public LatLng getCurrentPosition() {
         return new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-        //return new LatLng(44.742139, 10.578990); //DEBUG
+        //return new LatLng(44.7418205669546, 10.579973206259); //DEBUG
     }
 
     /**
@@ -176,7 +176,7 @@ public class VehicleService implements LocationListener {
         }
 
         return 0;
-        //return 15;
+        //return 11;
     }
 
 

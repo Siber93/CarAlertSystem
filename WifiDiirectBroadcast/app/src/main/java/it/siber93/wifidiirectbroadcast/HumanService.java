@@ -63,6 +63,8 @@ public class HumanService {
 
         // Get current time stamp + sec
         Long t_now = System.currentTimeMillis() + (1000 * sec);
+        /*Long t_now = Long.parseLong("1538141083491");
+        t_now += 1000 * sec;*/ //DEBUG
         // Get Position time stamp
         Long t = timestampPos;
 

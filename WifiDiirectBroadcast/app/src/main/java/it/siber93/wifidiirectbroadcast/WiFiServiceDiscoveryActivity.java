@@ -414,9 +414,17 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                     service.speed = Double.parseDouble(record.get(TXTRECORD_PROP_SPEED));
                                     service.timestamp = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP));
                                     service.timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
+                                    /*service.accuracy = Double.parseDouble("0");
+                                    service.bearing = Double.parseDouble("162.86");
+                                    service.longitude = Double.parseDouble("10.57985728134");
+                                    service.latitude = Double.parseDouble("44.74223895977");
+                                    service.speed = Double.parseDouble("1");
+                                    service.timestamp = Long.parseLong("1538141077149");
+                                    service.timestampPos = Long.parseLong("1538141070513");*/ // DEBUG
                                     // Check if the human will crash with the vehicle
                                     if(vServ.willHumanIntersectVehicle(service)) {
                                         appendStatus("[D] Human will intersect");
+                                        //appendStatus("###### H ########");
                                         // If yes draw it on the map
                                         service.posMarker = gmap.addMarker(new MarkerOptions()
                                                 .position(service.getHumanPositionIn(3))
@@ -430,11 +438,13 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                         appendStatus("speed: "+record.get(TXTRECORD_PROP_SPEED));
                                         appendStatus("t: "+record.get(TXTRECORD_PROP_TIMESTAMP));
                                         appendStatus("t-pos: "+record.get(TXTRECORD_PROP_TIMESTAMP_POS));
+                                        appendStatus("###### V ########");
+                                        appendStatus("lng: "+vServ.getCurrentPosition().longitude);
+                                        appendStatus("lat: "+vServ.getCurrentPosition().latitude);
+                                        appendStatus("speed: "+vServ.getCurrentSpeed());
+                                        appendStatus("t-now: "+System.currentTimeMillis());
                                     }
-                                    //adapter.add(service);
                                 }
-                                //adapter.notifyDataSetChanged();
-                                //}
                             }
                         }
                     });
