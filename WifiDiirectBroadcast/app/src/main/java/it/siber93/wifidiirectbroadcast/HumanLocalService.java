@@ -46,9 +46,9 @@ public class HumanLocalService{
     long startTime;
     long endTime;
     long curTime;
+    long timestamp;
+    boolean first;                              //flag for accuracy calculation
     LocationManager locationManager;
-    Context cnt;
-
 
     /**
      * class constructor
@@ -64,9 +64,9 @@ public class HumanLocalService{
         angolo = 0;
         azimuth = 0;
         acc = 0;
+        first = true;
         stepLength =78;
         speed = 1;
-        cnt = con;
         r_earth = (float)6378.137;
         sensorManager = (SensorManager)con.getSystemService(SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -111,6 +111,7 @@ public class HumanLocalService{
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
                 step++;
+                timestamp = System.currentTimeMillis();
                 curTime = System.nanoTime();
                 if (step == 1) {
                     startTime = System.nanoTime();      //After first step start calculate time in order to calculate speed
@@ -156,12 +157,14 @@ public class HumanLocalService{
      */
     //function to update Actual Coordinate with the GPS
     public void updateCoord(double x, double y){
-        double dlat = Math.abs(x*Math.PI/180-scX*Math.PI/180);
-        double dlon = Math.abs(y*Math.PI/180-scY*Math.PI/180);
-        double a = Math.sin(dlat/2)*Math.sin(dlat/2)+Math.cos(scX * Math.PI / 180)*Math.cos(x * Math.PI / 180)*Math.sin(dlon/2) * Math.sin(dlon/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        double d = r_earth * c;
-        acc = d*1000;
+        if (first!=true) {
+            double dlat = Math.abs(x * Math.PI / 180 - scX * Math.PI / 180);
+            double dlon = Math.abs(y * Math.PI / 180 - scY * Math.PI / 180);
+            double a = Math.sin(dlat / 2) * Math.sin(dlat / 2) + Math.cos(scX * Math.PI / 180) * Math.cos(x * Math.PI / 180) * Math.sin(dlon / 2) * Math.sin(dlon / 2);
+            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            double d = r_earth * c;
+            acc = d * 1000;
+        }else first = false;
         scX = x;
         scY = y;
     }
@@ -234,7 +237,7 @@ public class HumanLocalService{
      * @return timestamp in milliseconds
      */
     long getCurrentPositionTimeStamp(){
-        return curTime/(long)Math.pow(10,3);
+        return timestamp;
         //return System.currentTimeMillis();
     }
 
