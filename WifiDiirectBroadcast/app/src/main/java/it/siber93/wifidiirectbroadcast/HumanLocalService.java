@@ -45,10 +45,16 @@ public class HumanLocalService{
     double speed;                               //Movement speed of human between steps
     long startTime;
     long endTime;
+    long curTime;
     LocationManager locationManager;
+    Context cnt;
 
 
-    // TODO create a constructor where start the thraeds or position approximation
+    /**
+     * class constructor
+     * @param con application context
+     * @return nothing
+     */
     public HumanLocalService(Context con){
         scX = 0;
         scY = 0;
@@ -60,11 +66,15 @@ public class HumanLocalService{
         acc = 0;
         stepLength =78;
         speed = 0.1;
+        cnt = con;
         r_earth = (float)6378.137;
         sensorManager = (SensorManager)con.getSystemService(SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         stepCount = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
         locationManager = (LocationManager) con.getSystemService(Context.LOCATION_SERVICE);
+
+
+        //((WiFiServiceDiscoveryActivity)con).appendStatus("CIAO");
 
         //RotationVectorListener initialization
         rvListener = new SensorEventListener() {
@@ -105,12 +115,14 @@ public class HumanLocalService{
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
                 step++;
+                curTime = System.nanoTime();
                 if (step == 1) {
                     startTime = System.nanoTime();      //After first step start calculate time in order to calculate speed
-                }else {
+                }else if(step%5==0){
                     endTime = System.nanoTime();
-                    double sp = (stepLength / 100) / ((endTime - startTime) / Math.pow(10, 9));
+                    double sp = 5*(stepLength / 100) / ((endTime - startTime) / Math.pow(10, 9));
                     if (sp < 4) speed = sp;             //Calculate speed after every step
+                    ((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" speed "+speed));
                     startTime=endTime;
                 }
                 if (angle != null) {
@@ -131,11 +143,22 @@ public class HumanLocalService{
                 stepCount, SensorManager.SENSOR_DELAY_FASTEST);
         getCurrentLocation();
     }
+
+    /**
+     * distance calculation using number of step
+     * @param st number of step
+     * @return distance in km
+     */
     //function to calculate distance in km
     public double getDistance(double st){
         double distance = (float)(st*stepLength)/(float)100000;
         return distance;
     }
+
+    /**
+     * update actual coordinate using those from GPS
+     * @return nothing
+     */
     //function to update Actual Coordinate with the GPS
     public void updateCoord(double x, double y){
         double dlat = Math.abs(x*Math.PI/180-scX*Math.PI/180);
@@ -147,6 +170,11 @@ public class HumanLocalService{
         scX = x;
         scY = y;
     }
+
+    /**
+     * coordinate lat and lon GPS calculation
+     * @return nothing
+     */
     //function to get current lat and lon from GPS
     public void getCurrentLocation() {
 
@@ -193,8 +221,8 @@ public class HumanLocalService{
      * @return latitude in degree
      */
     double getCurrentLongitude(){
-        //return scY;
-        return  10.578581;
+        return scY;
+        //return  10.578581;
     }
 
     /**
@@ -202,8 +230,8 @@ public class HumanLocalService{
      * @return longitude in degree
      */
     double getCurrentLatitude(){
-        //return scX;
-        return 44.742336;
+        return scX;
+        //return 44.742336;
     }
 
     /**
@@ -211,8 +239,8 @@ public class HumanLocalService{
      * @return timestamp in milliseconds
      */
     long getCurrentPositionTimeStamp(){
-        //return endTime;
-        return System.currentTimeMillis();
+        return curTime;
+        //return System.currentTimeMillis();
     }
 
     /**
@@ -220,8 +248,9 @@ public class HumanLocalService{
      * @return accuracy in meters
      */
     double getAccuracy(){
-        //return acc;
-        return 1;
+        ((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" accuracy: "+acc));
+        return acc;
+        //return 1;
     }
 
     /**
@@ -229,8 +258,8 @@ public class HumanLocalService{
      * @return Azimuth in degree
      */
     double getCurrentBearing(){
-        //return Math.toDegrees(azimuth);
-        return 180;
+        return Math.toDegrees(azimuth);
+        //return 180;
     }
 
     /**
@@ -238,13 +267,11 @@ public class HumanLocalService{
      * @return speed in m/s
      */
     double getCurrentspeed(){
-        /*
         long ttime = System.nanoTime();
         //if time passed from last step is more than 2 sec then the human has stopped move and return 0.1
-        if ((startTime == endTime) && (((ttime - startTime) / Math.pow(10, 9))>=2)){
+        if ((startTime == endTime) && (((ttime - curTime) / Math.pow(10, 9))>=2)){
             return 0.1;
         }else return speed;
-        */
-        return 1;
+        //return 1;
     }
 }

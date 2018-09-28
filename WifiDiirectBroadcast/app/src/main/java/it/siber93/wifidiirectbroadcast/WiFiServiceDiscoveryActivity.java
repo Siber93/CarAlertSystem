@@ -370,6 +370,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                     humans_discovered.get(i).Lock();
                                     // Compare MAC address
                                     if (humans_discovered.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress)) {
+                                        appendStatus("[D] Human position updated");
                                         // Update values for this entity
                                         humans_discovered.get(i).device = device;
                                         humans_discovered.get(i).instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
@@ -390,6 +391,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                 }
 
                                 if (!found) {
+                                    appendStatus("[D] Human found");
                                     // If not found, create it and add it to the discovered list
                                     HumanService service = new HumanService();
 
@@ -404,12 +406,12 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                     service.timestampPos = Long.parseLong(record.get(TXTRECORD_PROP_TIMESTAMP_POS));
                                     // Check if the human will crash with the vehicle
                                     if(vServ.willHumanIntersectVehicle(service)) {
+                                        appendStatus("[D] Human will intersect");
                                         // If yes draw it on the map
                                         service.posMarker = gmap.addMarker(new MarkerOptions()
                                                 .position(service.getHumanPositionIn(3))
                                                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.man))
                                                 .draggable(false));
-                                        appendStatus("[D] Human found");
                                         humans_discovered.add(service);
                                     }
                                     //adapter.add(service);
