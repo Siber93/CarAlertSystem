@@ -65,16 +65,13 @@ public class HumanLocalService{
         azimuth = 0;
         acc = 0;
         stepLength =78;
-        speed = 0.1;
+        speed = 1;
         cnt = con;
         r_earth = (float)6378.137;
         sensorManager = (SensorManager)con.getSystemService(SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         stepCount = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
         locationManager = (LocationManager) con.getSystemService(Context.LOCATION_SERVICE);
-
-
-        //((WiFiServiceDiscoveryActivity)con).appendStatus("CIAO");
 
         //RotationVectorListener initialization
         rvListener = new SensorEventListener() {
@@ -96,8 +93,7 @@ public class HumanLocalService{
                 angle = orientations;
                 //Azimuth approximation, if the difference is less than offset the azimuth is approximated
                 if (angolo == 0) angolo = angle[0];
-                else if (Math.abs(angolo-angle[0])<offset) angolo=(angolo+angle[0])/2;
-                else angolo = angle[0];
+                else if (Math.abs(angolo-angle[0])>offset) angolo = angle[0];
                 for(int i = 0; i < 3; i++) {
                     orientations[i] = (float)(Math.toDegrees(orientations[i]));
                 }
@@ -122,7 +118,6 @@ public class HumanLocalService{
                     endTime = System.nanoTime();
                     double sp = 5*(stepLength / 100) / ((endTime - startTime) / Math.pow(10, 9));
                     if (sp < 4) speed = sp;             //Calculate speed after every step
-                    //((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" speed "+speed));
                     startTime=endTime;
                 }
                 if (angle != null) {
@@ -239,7 +234,7 @@ public class HumanLocalService{
      * @return timestamp in milliseconds
      */
     long getCurrentPositionTimeStamp(){
-        return curTime;
+        return curTime/(long)Math.pow(10,3);
         //return System.currentTimeMillis();
     }
 
@@ -248,7 +243,6 @@ public class HumanLocalService{
      * @return accuracy in meters
      */
     double getAccuracy(){
-        //((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" accuracy: "+acc));
         return acc;
         //return 1;
     }
