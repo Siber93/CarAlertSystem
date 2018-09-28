@@ -294,6 +294,16 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                     record.put(TXTRECORD_PROP_BEARING, String.valueOf(hServ.getCurrentBearing()));
                     record.put(TXTRECORD_PROP_SPEED, String.valueOf(hServ.getCurrentspeed()));
 
+
+                    appendStatus("--------------------");
+                    appendStatus("accuracy: "+record.get(TXTRECORD_PROP_ACCURACY));
+                    appendStatus("bearing: "+record.get(TXTRECORD_PROP_BEARING));
+                    appendStatus("lng: "+record.get(TXTRECORD_PROP_LONG));
+                    appendStatus("lat: "+record.get(TXTRECORD_PROP_LAT));
+                    appendStatus("speed: "+record.get(TXTRECORD_PROP_SPEED));
+                    appendStatus("t: "+record.get(TXTRECORD_PROP_TIMESTAMP));
+                    appendStatus("t-pos: "+record.get(TXTRECORD_PROP_TIMESTAMP_POS));
+
                     service = WifiP2pDnsSdServiceInfo.newInstance(
                             SERVICE_INSTANCE, SERVICE_REG_TYPE, record);
                     manager.addLocalService(channel, service, new WifiP2pManager.ActionListener() {
@@ -370,7 +380,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                     humans_discovered.get(i).Lock();
                                     // Compare MAC address
                                     if (humans_discovered.get(i).device.deviceAddress.equalsIgnoreCase(device.deviceAddress)) {
-                                        appendStatus("[D] Human position updated");
+                                        //appendStatus("[D] Human position updated");
                                         // Update values for this entity
                                         humans_discovered.get(i).device = device;
                                         humans_discovered.get(i).instanceName = record.get(TXTRECORD_PROP_SERVICE_INSTANCE);
@@ -391,7 +401,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                 }
 
                                 if (!found) {
-                                    appendStatus("[D] Human found");
+                                    //appendStatus("[D] Human found");
                                     // If not found, create it and add it to the discovered list
                                     HumanService service = new HumanService();
 
@@ -413,6 +423,13 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.man))
                                                 .draggable(false));
                                         humans_discovered.add(service);
+                                        appendStatus("accuracy: "+record.get(TXTRECORD_PROP_ACCURACY));
+                                        appendStatus("bearing: "+record.get(TXTRECORD_PROP_BEARING));
+                                        appendStatus("lng: "+record.get(TXTRECORD_PROP_LONG));
+                                        appendStatus("lat: "+record.get(TXTRECORD_PROP_LAT));
+                                        appendStatus("speed: "+record.get(TXTRECORD_PROP_SPEED));
+                                        appendStatus("t: "+record.get(TXTRECORD_PROP_TIMESTAMP));
+                                        appendStatus("t-pos: "+record.get(TXTRECORD_PROP_TIMESTAMP_POS));
                                     }
                                     //adapter.add(service);
                                 }

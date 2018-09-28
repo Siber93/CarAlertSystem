@@ -122,7 +122,7 @@ public class HumanLocalService{
                     endTime = System.nanoTime();
                     double sp = 5*(stepLength / 100) / ((endTime - startTime) / Math.pow(10, 9));
                     if (sp < 4) speed = sp;             //Calculate speed after every step
-                    ((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" speed "+speed));
+                    //((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" speed "+speed));
                     startTime=endTime;
                 }
                 if (angle != null) {
@@ -248,7 +248,7 @@ public class HumanLocalService{
      * @return accuracy in meters
      */
     double getAccuracy(){
-        ((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" accuracy: "+acc));
+        //((WiFiServiceDiscoveryActivity)cnt).appendStatus(String.valueOf(" accuracy: "+acc));
         return acc;
         //return 1;
     }
