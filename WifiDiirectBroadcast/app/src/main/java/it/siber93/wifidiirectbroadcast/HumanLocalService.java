@@ -45,7 +45,6 @@ public class HumanLocalService{
     double speed;                               //Movement speed of human between steps
     long startTime;
     long endTime;
-    long curTime;
     long timestamp;
     boolean first;                              //flag for accuracy calculation
     LocationManager locationManager;
@@ -66,7 +65,7 @@ public class HumanLocalService{
         acc = 0;
         first = true;
         stepLength =78;
-        speed = 1;
+        speed = 0.8;
         r_earth = (float)6378.137;
         sensorManager = (SensorManager)con.getSystemService(SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
@@ -112,7 +111,6 @@ public class HumanLocalService{
             public void onSensorChanged(SensorEvent sensorEvent) {
                 step++;
                 timestamp = System.currentTimeMillis();
-                curTime = System.nanoTime();
                 if (step == 1) {
                     startTime = System.nanoTime();      //After first step start calculate time in order to calculate speed
                 }else if(step%5==0){
@@ -264,11 +262,7 @@ public class HumanLocalService{
      * @return speed in m/s
      */
     double getCurrentspeed(){
-        long ttime = System.nanoTime();
-        //if time passed from last step is more than 2 sec then the human has stopped move and return 0.1
-        if ((startTime == endTime) && (((ttime - curTime) / Math.pow(10, 9))>=2)){
-            return 0.1;
-        }else return speed;
+         return speed;
         //return 1;
     }
 }
