@@ -22,9 +22,11 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -118,6 +120,8 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
 
     private GoogleMap gmap;
 
+    int m_text;                                                                                 //Height of the user
+    AlertDialog dialog;                                                                         //Dialog to retrieve  data
 
 
     @Override
@@ -126,6 +130,38 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        //AlertDialog for height input
+        AlertDialog.Builder builder = new AlertDialog.Builder(WiFiServiceDiscoveryActivity.this);
+        builder.setTitle("Insert your height(cm)");
+        //Set up the input
+        final EditText input = new EditText(WiFiServiceDiscoveryActivity.this);
+        //Specify the type of input expected
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_NORMAL);
+        builder.setView(input);
+        // Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+            }
+        });
+        dialog = builder.create();
+        dialog.show();
+        //Overriding the handler immediately after show
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                //Control if inserted value is correct and close the dialog after
+                Boolean wantToCloseDialog = false;
+                if(input.getText().length()>1){
+                    m_text = Integer.parseInt(input.getText().toString());
+                    if (m_text>100 && m_text<300) wantToCloseDialog = true;
+                }
+                if(wantToCloseDialog)
+                    dialog.dismiss();
+            }
+        });
 
         statusTxtView = (TextView) findViewById(R.id.status_text);
 
@@ -134,8 +170,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
         map.onCreate(null);
         map.onResume();
         map.getMapAsync(this);
-
-
+        
         // Human switch button initialization
         swh = (Switch) findViewById(R.id.switchH);
         swh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -145,14 +180,13 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                 if (b) {
                     // Start publishing + discovery
                     // Create service manager
-                    hServ = new HumanLocalService(getApplicationContext());
+                    hServ = new HumanLocalService(getApplicationContext(), m_text);
                     // TODO start position management, it could be integrated in the constructor
                     // Publish this device on the network sending beacon
                     serviceBroadcastRunnable.run();
                     // Initiates callbacks for service discovery
                     prepareServiceDiscovery();
                     startServiceDiscovery();
-
                 }
                 else{
                     // Disable switch for few seconds
@@ -160,7 +194,6 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                 }
             }
         });
-
 
         // Vehicle switch button initialization
         swv = (Switch) findViewById(R.id.switchV);

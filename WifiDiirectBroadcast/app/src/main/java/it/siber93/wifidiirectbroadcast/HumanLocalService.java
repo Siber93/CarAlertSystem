@@ -54,7 +54,7 @@ public class HumanLocalService{
      * @param con application context
      * @return nothing
      */
-    public HumanLocalService(Context con){
+    public HumanLocalService(Context con, int a){
         scX = 0;
         scY = 0;
         lat = 0;
@@ -64,7 +64,7 @@ public class HumanLocalService{
         azimuth = 0;
         acc = 0;
         first = true;
-        stepLength =78;
+        stepLength = a*0.415;
         speed = 0.8;
         r_earth = (float)6378.137;
         sensorManager = (SensorManager)con.getSystemService(SENSOR_SERVICE);
