@@ -25,6 +25,7 @@ import android.support.v7.widget.Toolbar;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
@@ -265,8 +266,18 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
             }
         });
 
-
-
+        Button clean = (Button) findViewById(R.id.cleanBtn);
+        clean.setOnClickListener(
+            new View.OnClickListener() {
+                 @Override
+                 public void onClick(View v) {
+                     if(vServ != null)
+                     {
+                         cleaningThreadRunnable.run();
+                     }
+                 }
+            }
+        );
 
 
         // Check location permission
@@ -456,11 +467,9 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                     service.timestampPos = Long.parseLong("1538141070513");*/ // DEBUG
                                     // Check if the human will crash with the vehicle
                                     if(vServ.willHumanIntersectVehicle(service)) {
-                                        appendStatus("[D] Human will intersect");
-                                        //appendStatus("###### H ########");
                                         // If yes draw it on the map
                                         service.posMarker = gmap.addMarker(new MarkerOptions()
-                                                .position(service.getHumanPositionIn(3))
+                                                .position(service.getHumanPositionIn(0))
                                                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.man))
                                                 .draggable(false));
                                         humans_discovered.add(service);
@@ -471,11 +480,17 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                                         appendStatus("speed: "+record.get(TXTRECORD_PROP_SPEED));
                                         appendStatus("t: "+record.get(TXTRECORD_PROP_TIMESTAMP));
                                         appendStatus("t-pos: "+record.get(TXTRECORD_PROP_TIMESTAMP_POS));
-                                        appendStatus("###### V ########");
+                                        appendStatus("###### H ########");
+
                                         appendStatus("lng: "+vServ.getCurrentPosition().longitude);
                                         appendStatus("lat: "+vServ.getCurrentPosition().latitude);
                                         appendStatus("speed: "+vServ.getCurrentSpeed());
+                                        appendStatus("v-h distance: "+vServ.getLocationsDistance(
+                                                vServ.getCurrentPosition(), // Pos vehicle now
+                                                service.getHumanPositionIn(0))); // Pos Human now
                                         appendStatus("t-now: "+System.currentTimeMillis());
+                                        appendStatus("###### V ########");
+                                        appendStatus("[D] Human will intersect");
                                     }
                                 }
                             }
@@ -581,7 +596,32 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
     private Runnable cleaningThreadRunnable = new Runnable() {
         @Override
         public void run() {
-            // TODO implement
+            while(true)
+            {
+                for(int i = 0; i < humans_discovered.size(); i++)
+                {
+                    HumanService h = humans_discovered.get(i);
+                    h.Lock();
+                    // Check if the human is out of WIfi range + offset
+                    if(vServ.getLocationsDistance(
+                            vServ.getCurrentPosition(), // Pos vehicle now
+                            h.getHumanPositionIn(0))>= VehicleService.WIFI_MAX_RANGE+20)
+                    {
+                        // if YES remove it
+                        humans_discovered.remove(i);
+                    }
+                    h.posMarker.remove();
+                    h.Unlock();
+                }
+                try {
+                    // Wait 10 sec
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return; // DEBUG TODO delete
+            }
+
         }
     };
 
