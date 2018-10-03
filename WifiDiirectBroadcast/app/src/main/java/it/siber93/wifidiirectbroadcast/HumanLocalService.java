@@ -65,7 +65,7 @@ public class HumanLocalService{
         acc = 0;
         first = true;
         stepLength = a*0.415;
-        speed = 0.8;
+        speed = 1;
         r_earth = (float)6378.137;
         sensorManager = (SensorManager)con.getSystemService(SENSOR_SERVICE);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
