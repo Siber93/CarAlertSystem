@@ -47,6 +47,7 @@ public class HumanLocalService{
     long endTime;
     long timestamp;
     boolean first;                              //flag for accuracy calculation
+    boolean fst;
     LocationManager locationManager;
 
     /**
@@ -64,6 +65,7 @@ public class HumanLocalService{
         azimuth = 0;
         acc = 0;
         first = true;
+        fst = true;
         stepLength = a*0.415;
         speed = 1;
         r_earth = (float)6378.137;
@@ -90,6 +92,10 @@ public class HumanLocalService{
                 float[] orientations = new float[4];
                 SensorManager.getOrientation(remappedRotationMatrix, orientations);
                 angle = orientations;
+                if (fst == true){
+                    azimuth = (float)Math.toDegrees(angle[0]);
+                    fst = false;
+                }
                 //Azimuth approximation, if the difference is less than offset the azimuth is approximated
                 if (angolo == 0) angolo = angle[0];
                 else if (Math.abs(angolo-angle[0])>offset) angolo = angle[0];
