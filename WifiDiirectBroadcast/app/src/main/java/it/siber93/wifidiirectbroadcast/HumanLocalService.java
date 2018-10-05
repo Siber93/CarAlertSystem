@@ -38,7 +38,6 @@ public class HumanLocalService{
     float[] angle = new float[3];               //Rotation vector values of azimuth pitch and roll in rad
     float angolo;                               //Azimuth filtered
     float azimuth;                              //Azimuth value after a step
-    float[] rvVal = new float[3];               //Rotation vector values in degree
     long step;                                  //Number of steps from the last gps location received
     double stepLength;
     double r_earth;                             //Earth_radius
@@ -95,10 +94,6 @@ public class HumanLocalService{
                 //Azimuth approximation, if the difference is less than offset the azimuth is not modified
                 if (angolo == 0) angolo = angle[0];
                 else if (Math.abs(angolo-angle[0])>offset) angolo = angle[0];
-                for(int i = 0; i < 3; i++) {
-                    orientations[i] = (float)(Math.toDegrees(orientations[i]));
-                }
-                rvVal = orientations;
             }
             @Override
             public void onAccuracyChanged(Sensor sensor, int i) {
