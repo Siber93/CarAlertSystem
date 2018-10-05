@@ -82,7 +82,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
      */
     public int AUTOINCREMENT_NUMBER                                     = 0;
 
-    public static final int PUBLISH_TIME                                = 10000;
+    public static final int PUBLISH_TIME                                = 5000;
     public static final int DISCOVERY_TIME                              = 10000;
 
     private WifiP2pManager manager;
@@ -414,6 +414,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                             // A service has been discovered. Is this our app?
                             if (record.containsKey(TXTRECORD_PROP_SERVICE_INSTANCE) &&
                                     record.get(TXTRECORD_PROP_SERVICE_INSTANCE).equalsIgnoreCase(SERVICE_INSTANCE)) {
+                                appendStatus("DIO");
 
                                 // Flag that indicates when the service has already been added in the local list
                                 boolean found = false;
