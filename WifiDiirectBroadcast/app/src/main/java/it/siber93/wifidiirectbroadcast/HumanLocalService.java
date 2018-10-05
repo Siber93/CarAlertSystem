@@ -52,6 +52,7 @@ public class HumanLocalService{
     /**
      * class constructor
      * @param con application context
+     * @param a person height
      * @return nothing
      */
     public HumanLocalService(Context con, int a){
