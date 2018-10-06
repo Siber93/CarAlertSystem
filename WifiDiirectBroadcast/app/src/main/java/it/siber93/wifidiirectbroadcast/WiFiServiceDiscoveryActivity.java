@@ -84,7 +84,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
 
     public static final int PUBLISH_TIME                                = 5000;
     public static final int DISCOVERY_TIME                              = 10000;
-
+    public static final int CLEANING_TIME                               = 10000;
     private WifiP2pManager manager;
 
 
@@ -273,6 +273,7 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
                  public void onClick(View v) {
                      if(vServ != null)
                      {
+                         v.setEnabled(false);
                          cleaningThreadRunnable.run();
                      }
                  }
@@ -597,32 +598,24 @@ public class WiFiServiceDiscoveryActivity extends AppCompatActivity implements O
     private Runnable cleaningThreadRunnable = new Runnable() {
         @Override
         public void run() {
-            while(true)
+            for(int i = 0; i < humans_discovered.size(); i++)
             {
-                for(int i = 0; i < humans_discovered.size(); i++)
+                HumanService h = humans_discovered.get(i);
+                h.Lock();
+                // Check if the human is out of WIfi range + offset
+                if(vServ.getLocationsDistance(
+                        vServ.getCurrentPosition(), // Pos vehicle now
+                        h.getHumanPositionIn(0))>= VehicleService.WIFI_MAX_RANGE+20)
                 {
-                    HumanService h = humans_discovered.get(i);
-                    h.Lock();
-                    // Check if the human is out of WIfi range + offset
-                    if(vServ.getLocationsDistance(
-                            vServ.getCurrentPosition(), // Pos vehicle now
-                            h.getHumanPositionIn(0))>= VehicleService.WIFI_MAX_RANGE+20)
-                    {
-                        // if YES remove it
-                        humans_discovered.remove(i);
-                    }
-                    h.posMarker.remove();
-                    h.Unlock();
+                    // if YES remove it
+                    humans_discovered.remove(i);
                 }
-                try {
-                    // Wait 10 sec
-                    Thread.sleep(10000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                return; // DEBUG TODO delete
+                h.posMarker.remove();
+                h.Unlock();
             }
-
+            cleaningThreadHandler.postDelayed(
+                    cleaningThreadRunnable,
+                    CLEANING_TIME);
         }
     };
 
