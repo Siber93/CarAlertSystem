@@ -221,7 +221,8 @@ La seguente funzione verifica se due segmenti si intersezionano.
 * @param h human service Object
 * @return True -> Intersection
 */
-public boolean willHumanIntersectVehicle(HumanService h) {
+public boolean willHumanIntersectVehicle(HumanService h) 
+{
 	LatLng loc = getCurrentPosition();
 	int start = getCurrentPolylineSegment();
 	int end = start;
@@ -284,14 +285,47 @@ Proseguento con l'analisi della funzione \textit{willHumanIntersectVehicle}, il 
 Una volta terminata questa verifica, avremo un estremo superiore ed un estremo inferiore che limitano il numero di indici dei segmenti sui quali poi verra\' eseguito il controllo di intersezione con il segmente pedone.
 Il secondo ciclo for esegue per ogni segmento compreso nell intervallo prima definito il controllo di intersezione con il segmento del pedone.
 Questo controllo viene eseguito dalla funzione \textit{doIntersect} alla quale vengono passati i due punti del segmento veicolo, la posizione del pedone descritta all'interno del record di Discovery e la stima della posizione del pedone tra J secondi, dove J e\' il tempo impiegato dal veicolo a percorre il range del WiFi.
+La nuova posione viene calcolata utilizzando un moto rettilineo uniforme dove il tempo e\' uguale J + timestamp corrent - timestamp\_pos ottenuto dal service discovery del pedone. Timestamp\_pos e\' l'istante in cui e\' stata calcolata la posizione del pedone prima di essere inviata. 
 \textit{doIntersect} e\' l'unica funzione ad utilizzare calcoli euclidei invece che sferici. Questo perche\' la superfice di una sfera per porzioni molto piccole, puo\' essere considerata una superficie piana.
+Il controllo di intersezione viene sviluppato utilizzato il concetto di orientazione tra punti.
+Due segmenti (p1,q1) e (p2,q2) si intersezionano se e solo se una delle seguenti condizione e\' verificata.
+\\
+1. Caso generale:\\
+(p1, q1, p2) e (p1, q1, q2) hanno orientazioni differenti 
+\&\& (p2, q2, p1) e (p2, q2, q1) hanno orientazioni differenti.
+\\
+2. Caso speciale:\\
+(p1, q1, p2), (p1, q1, q2), (p2, q2, p1), e (p2, q2, q1) sono collineari \&\& le proiezioni in x di (p1, q1) e (p2, q2) si intersezionano \&\& le proiezioni in y di (p1, q1) e (p2, q2) si intersezionano.
+\\
+L'insieme di tutti questi algoritmi danno vita al modello di previsione.
  
- 
- 
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{prevmod1}
+	\caption{Intersione tra segmenti}
+	\label{fig:prevmod1}
+\end{figure}
+
 
 \section{Performance evaluation}
-Illustra qui i risultati sperimentali (simulazioni o esperimenti) che catturano le prestazioni del sistema realizzato. Chiarisci quali sono gli indici di stima
-e come sono calcolati. Inserisci un breve commento per ogni grafico.
+Sfortunatamente effettuare delle prove con questo sistema non risulta per niente semplice. Questo perche\' sarebbe necessario scegliere un'area urbuana con un alto numero di pedoni e veicoli per intravedere tutti i minimi particolari e poter dunque costruire modelli realistici.
+Detto questo, i nostri test sono stati effettuati in aree rurali (per non intralciare il traffico), con pero\'  diversi ostacoli tra trasmettitore e ricevente.
+Infatti gli scenarii da noi scelti ed analizzati sono i seguenti.
+
+\begin{center}
+
+
+	\begin{tabular}{lll|ll}
+		\hline
+		& \multicolumn{2}{l|}{Sole} & \multicolumn{2}{l}{Pioggia} \\
+		& $\bot$        & //        & $\bot$         & //         \\ \hline
+		Linea diretta                     & 1             & 2         & 3              & 4          \\ \hline
+		\multicolumn{1}{c}{Curva/Ostacoli} & 9             & 10        & 11             & 12         \\ \hline
+	\end{tabular}
+\\~\\
+\textit{Velocit\'a del veicolo $\sim$ 50Km/h}
+
+\end{center}
 
 \section{Conclusioni}
 Conclusioni, possibili sviluppi futuri e limitazioni del progetto realizzato
