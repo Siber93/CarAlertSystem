@@ -157,7 +157,7 @@ public class HumanLocalService{
                         25000);
             }
         };
-        hnd.postDelayed(rn,100);
+        hnd.postDelayed(rn,500);
     }
 
     /**
