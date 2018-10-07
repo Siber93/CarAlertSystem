@@ -9,6 +9,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 
 import static android.content.Context.SENSOR_SERVICE;
@@ -39,6 +40,7 @@ public class HumanLocalService{
     float angolo;                               //Azimuth filtered
     float azimuth;                              //Azimuth value after a step
     long step;                                  //Number of steps from the last gps location received
+    long step2;                                 //Number of steps for speed calculation
     double stepLength;
     double r_earth;                             //Earth_radius
     double speed;                               //Movement speed of human between steps
@@ -46,7 +48,10 @@ public class HumanLocalService{
     long endTime;
     long timestamp;
     boolean first;                              //flag for accuracy calculation
+    boolean fst;                                //flag for starting time calculation
     LocationManager locationManager;
+    Runnable rn;                                //Runnable for GPS updates over time
+    Handler hnd;                                //Handler for GPS updates over time
 
     /**
      * class constructor
@@ -60,10 +65,12 @@ public class HumanLocalService{
         lat = 0;
         lon = 0;
         step = 0;
+        step2 = 0;
         angolo = 0;
         azimuth = 0;
         acc = 0;
         first = true;
+        fst = true;
         stepLength = a*0.415;
         speed = 1;
         r_earth = (float)6378.137;
@@ -107,10 +114,13 @@ public class HumanLocalService{
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
                 step++;
+                step2++;
                 timestamp = System.currentTimeMillis();
-                if (step == 1) {
+                if (fst == true) {
                     startTime = System.nanoTime();      //After first step start calculate time in order to calculate speed
-                }else if(step%5==0){
+                    fst = false;
+                }else if(step2%5==0){
+                    step2 = 0;
                     endTime = System.nanoTime();
                     double sp = 5*(stepLength / 100) / ((endTime - startTime) / Math.pow(10, 9));
                     if (sp < 4) speed = sp;             //Calculate speed after every step
@@ -121,10 +131,13 @@ public class HumanLocalService{
                     azimuth = angolo;
                     scX += (getDistance(Math.cos(azimuth))/r_earth)*(180/Math.PI)/Math.cos(scY*Math.PI/180);
                     scY += (getDistance(Math.sin(azimuth))/r_earth)*(180/Math.PI);
-                    if (step%30==0) getCurrentLocation();   //ask GPS location every 30 steps
+                    if (step%30==0) {
+                        hnd.removeCallbacks(rn);
+                        getCurrentLocation();   //ask GPS location every 30 steps
+                        hnd.postDelayed(rn, 25000);
+                    }
                 }
             }
-            // step length = altezza * 0.415 o 0.413 altrimenti 78 cm o 70 cm
             @Override
             public void onAccuracyChanged(Sensor sensor, int i) {
             }
@@ -132,7 +145,19 @@ public class HumanLocalService{
         //Listener Registration
         sensorManager.registerListener(stepCountListener,
                 stepCount, SensorManager.SENSOR_DELAY_FASTEST);
-        getCurrentLocation();
+        //Handler to ask GPS coordinates
+        hnd = new Handler();
+        rn = new Runnable() {
+            @Override
+            public void run() {
+                getCurrentLocation();
+                //Schedule handler to call GPS updates every 25 seconds
+                hnd.postDelayed(
+                        rn,
+                        25000);
+            }
+        };
+        hnd.postDelayed(rn,100);
     }
 
     /**
