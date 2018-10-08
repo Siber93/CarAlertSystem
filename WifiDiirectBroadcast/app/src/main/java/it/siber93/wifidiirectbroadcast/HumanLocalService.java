@@ -124,7 +124,7 @@ public class HumanLocalService{
                     step2 = 0;
                     endTime = System.nanoTime();
                     double sp = 5*(stepLength / 100) / ((endTime - startTime) / Math.pow(10, 9));
-                    if (sp < 4) speed = sp;             //Calculate speed after every step
+                    speed = Math.max(sp,1);             //return max between speed value and 1
                     startTime=endTime;
                 }
                 if (angle != null) {
