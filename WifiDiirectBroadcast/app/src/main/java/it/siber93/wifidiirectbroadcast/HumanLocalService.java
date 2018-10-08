@@ -109,6 +109,7 @@ public class HumanLocalService{
         //Listener Registration
         sensorManager.registerListener(rvListener,
                 rotationVectorSensor, SensorManager.SENSOR_DELAY_NORMAL);
+
         //StepCounterListener initialization
         stepCountListener = new SensorEventListener() {
             @Override
@@ -274,8 +275,8 @@ public class HumanLocalService{
      * Last position bearing(Azimuth)
      * @return Azimuth in degree
      */
-    double getCurrentBearing(){
-        return Math.toDegrees(azimuth);
+    float getCurrentBearing(){
+        return (float)Math.toDegrees(azimuth);
         //return 180;
     }
 
