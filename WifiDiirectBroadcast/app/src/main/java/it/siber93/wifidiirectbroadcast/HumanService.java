@@ -61,8 +61,8 @@ public class HumanService {
         // Get the bearing (direction)
         double b = bearing;
 
-        // Get current time stamp + sec
-        Long t_now = System.currentTimeMillis() + (1000 * sec);
+        // Time at Publisher sending time (max error 5 sec, for low speed it is ok) + sec
+        Long t_now = timestamp + (1000 * sec);
         /*Long t_now = Long.parseLong("1538141083491");
         t_now += 1000 * sec;*/ //DEBUG
         // Get Position time stamp
