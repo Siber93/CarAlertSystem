@@ -38,7 +38,6 @@ public class HumanLocalService{
     double acc;                                 //Accuracy
     float[] angle = new float[3];               //Rotation vector values of azimuth pitch and roll in rad
     float angolo;                               //Azimuth filtered
-    float azimuth;                              //Azimuth value after a step
     long step;                                  //Number of steps from the last gps location received
     long step2;                                 //Number of steps for speed calculation
     double stepLength;
@@ -67,7 +66,6 @@ public class HumanLocalService{
         step = 0;
         step2 = 0;
         angolo = 0;
-        azimuth = 0;
         acc = 0;
         first = true;
         fst = true;
@@ -83,7 +81,7 @@ public class HumanLocalService{
         rvListener = new SensorEventListener() {
             @Override
             public void onSensorChanged(SensorEvent sensorEvent) {
-                float offset = (float)Math.toRadians(10);           //Offset for azimuth approximation
+                float offset = (float)Math.toRadians(5);           //Offset for azimuth approximation
                 float[] rotationMatrix = new float[16];
                 SensorManager.getRotationMatrixFromVector(
                         rotationMatrix, sensorEvent.values);
@@ -97,7 +95,6 @@ public class HumanLocalService{
                 float[] orientations = new float[4];
                 SensorManager.getOrientation(remappedRotationMatrix, orientations);
                 angle = orientations;
-
                 //Azimuth approximation, if the difference is less than offset the azimuth is not modified
                 if (angolo == 0) angolo = angle[0];
                 else if (Math.abs(angolo-angle[0])>offset) angolo = angle[0];
@@ -129,9 +126,8 @@ public class HumanLocalService{
                 }
                 if (angle != null) {
                     //Calculate Actual longitude and latitude
-                    azimuth = angolo;
-                    scX += (getDistance(Math.cos(azimuth))/r_earth)*(180/Math.PI)/Math.cos(scY*Math.PI/180);
-                    scY += (getDistance(Math.sin(azimuth))/r_earth)*(180/Math.PI);
+                    scX += (getDistance(Math.cos(angolo))/r_earth)*(180/Math.PI)/Math.cos(scY*Math.PI/180);
+                    scY += (getDistance(Math.sin(angolo))/r_earth)*(180/Math.PI);
                     if (step%30==0) {
                         hnd.removeCallbacks(rn);
                         getCurrentLocation();   //ask GPS location every 30 steps
@@ -276,7 +272,7 @@ public class HumanLocalService{
      * @return Azimuth in degree
      */
     float getCurrentBearing(){
-        return (float)Math.toDegrees(azimuth);
+        return (float)Math.toDegrees(angolo);
         //return 180;
     }
 
